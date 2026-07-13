@@ -1240,9 +1240,9 @@ function renderCharacterStage() {
   const code = encode(settings.scheme, t.pinyin)
   return `
     <div class="char-stage">
+      <div class="hanzi">${t.char}</div>
       <div class="pinyin-line">${t.pinyin} · ${code}</div>
       ${renderCodeSlots()}
-      <div class="hanzi">${t.char}</div>
     </div>
   `
 }

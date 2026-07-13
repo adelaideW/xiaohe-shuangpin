@@ -823,8 +823,8 @@ export function bootEnglish(root) {
 
     return `
       <div class="char-stage word-stage">
-        <div class="pinyin-line">${t ? displayChar(t.char) : ''}</div>
         <div class="hanzi word-display english-word" aria-label="${escapeHtml(word)}">${letters}</div>
+        <div class="pinyin-line">${t ? displayChar(t.char) : ''}</div>
       </div>
     `
   }

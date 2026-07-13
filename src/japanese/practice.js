@@ -751,9 +751,9 @@ export function bootJapanese(root) {
 
     return `
       <div class="char-stage word-stage">
+        <div class="hanzi word-display jp-word">${letters}</div>
         <div class="pinyin-line">${hintText}</div>
         <div class="code-progress">${slots}</div>
-        <div class="hanzi word-display jp-word">${letters}</div>
       </div>`
   }
 
