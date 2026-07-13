@@ -2,18 +2,21 @@
  * Japanese passages as surface + hiragana reading segments.
  * Type romaji for each segment; hint shows ひらがな.
  *
+ * Article bank is shared with speaking (`articleBank.js`).
  * Sentence bank includes examples adapted from https://j-nihongo.com/
  * (grammar 例文 with readings).
  */
 
 import { punctTypingKey } from '../punct.js'
-import { AOZORA_PASSAGES } from './aozoraBank.js'
+import { JA_ARTICLE_BANK } from './articleBank.js'
+import { segmentsFromAozoraText } from './aozoraBank.js'
 
 /** @typedef {{ surface: string, kana: string | null }} JpSegment */
 /** @typedef {{ title: string, segments: JpSegment[] }} JpPassage */
 
 export { JP_SENTENCES } from './sentences.generated.js'
 export { AOZORA_PASSAGES } from './aozoraBank.js'
+export { JA_ARTICLE_BANK } from './articleBank.js'
 
 /** @type {JpPassage[]} */
 export const JP_WORDS = [
@@ -39,152 +42,12 @@ export const JP_WORDS = [
   { title: '単語', segments: [{ surface: '練習', kana: 'れんしゅう' }] },
 ]
 
+/** Shared library (≥30) for typing articles — same titles as speaking. */
 /** @type {JpPassage[]} */
-export const JP_ARTICLES = [
-  {
-    title: '春の朝',
-    segments: [
-      { surface: '朝', kana: 'あさ' },
-      { surface: 'の', kana: 'の' },
-      { surface: '光', kana: 'ひかり' },
-      { surface: 'が', kana: 'が' },
-      { surface: '窓', kana: 'まど' },
-      { surface: 'から', kana: 'から' },
-      { surface: '差し込み', kana: 'さしこみ' },
-      { surface: '、', kana: null },
-      { surface: '桜', kana: 'さくら' },
-      { surface: 'の', kana: 'の' },
-      { surface: '花びら', kana: 'はなびら' },
-      { surface: 'が', kana: 'が' },
-      { surface: 'ゆっくり', kana: 'ゆっくり' },
-      { surface: 'と', kana: 'と' },
-      { surface: '舞い落ちる', kana: 'まいおちる' },
-      { surface: '。', kana: null },
-      { surface: '深呼吸', kana: 'しんこきゅう' },
-      { surface: 'を', kana: 'を' },
-      { surface: 'すると', kana: 'すると' },
-      { surface: '、', kana: null },
-      { surface: '新しい', kana: 'あたらしい' },
-      { surface: '一日', kana: 'いちにち' },
-      { surface: 'が', kana: 'が' },
-      { surface: '始まる', kana: 'はじまる' },
-      { surface: '気配', kana: 'けはい' },
-      { surface: 'が', kana: 'が' },
-      { surface: 'した', kana: 'した' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '駅の風景',
-    segments: [
-      { surface: '電車', kana: 'でんしゃ' },
-      { surface: 'が', kana: 'が' },
-      { surface: 'ホーム', kana: 'ほーむ' },
-      { surface: 'に', kana: 'に' },
-      { surface: '滑り込む', kana: 'すべりこむ' },
-      { surface: '。', kana: null },
-      { surface: '人々', kana: 'ひとびと' },
-      { surface: 'は', kana: 'は' },
-      { surface: '急ぎ足', kana: 'いそぎあし' },
-      { surface: 'で', kana: 'で' },
-      { surface: '乗り換える', kana: 'のりかえる' },
-      { surface: '。', kana: null },
-      { surface: '私も', kana: 'わたしも' },
-      { surface: '鞄', kana: 'かばん' },
-      { surface: 'を', kana: 'を' },
-      { surface: '抱えて', kana: 'かかえて' },
-      { surface: '、', kana: null },
-      { surface: '次', kana: 'つぎ' },
-      { surface: 'の', kana: 'の' },
-      { surface: '予定', kana: 'よてい' },
-      { surface: 'へ', kana: 'へ' },
-      { surface: '向かう', kana: 'むかう' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: 'ことわざ',
-    segments: [
-      { surface: '急がば', kana: 'いそがば' },
-      { surface: '回れ', kana: 'まわれ' },
-      { surface: '。', kana: null },
-      { surface: '石', kana: 'いし' },
-      { surface: 'の', kana: 'の' },
-      { surface: '上', kana: 'うえ' },
-      { surface: 'にも', kana: 'にも' },
-      { surface: '三年', kana: 'さんねん' },
-      { surface: '。', kana: null },
-      { surface: '習う', kana: 'ならう' },
-      { surface: 'より', kana: 'より' },
-      { surface: '慣れよ', kana: 'なれよ' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '学びについて',
-    segments: [
-      { surface: '言葉', kana: 'ことば' },
-      { surface: 'を', kana: 'を' },
-      { surface: '覚える', kana: 'おぼえる' },
-      { surface: 'とき', kana: 'とき' },
-      { surface: 'は', kana: 'は' },
-      { surface: '、', kana: null },
-      { surface: '完璧', kana: 'かんぺき' },
-      { surface: 'を', kana: 'を' },
-      { surface: '目指す', kana: 'めざす' },
-      { surface: 'より', kana: 'より' },
-      { surface: '、', kana: null },
-      { surface: '毎日', kana: 'まいにち' },
-      { surface: '少し', kana: 'すこし' },
-      { surface: 'ずつ', kana: 'ずつ' },
-      { surface: '触れる', kana: 'ふれる' },
-      { surface: 'こと', kana: 'こと' },
-      { surface: 'が', kana: 'が' },
-      { surface: '大切', kana: 'たいせつ' },
-      { surface: 'です', kana: 'です' },
-      { surface: '。', kana: null },
-      { surface: '間違えて', kana: 'まちがえて' },
-      { surface: 'も', kana: 'も' },
-      { surface: '気にせず', kana: 'きにせず' },
-      { surface: '、', kana: null },
-      { surface: 'もう', kana: 'もう' },
-      { surface: '一度', kana: 'いちど' },
-      { surface: '試せば', kana: 'ためせば' },
-      { surface: 'いい', kana: 'いい' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '夏目漱石 · こころ（冒頭）',
-    segments: [
-      { surface: '私', kana: 'わたくし' },
-      { surface: 'は', kana: 'は' },
-      { surface: 'その', kana: 'その' },
-      { surface: '人', kana: 'ひと' },
-      { surface: 'を', kana: 'を' },
-      { surface: '常', kana: 'つね' },
-      { surface: 'に', kana: 'に' },
-      { surface: '先生', kana: 'せんせい' },
-      { surface: 'と呼んで', kana: 'とよんで' },
-      { surface: 'いた', kana: 'いた' },
-      { surface: '。', kana: null },
-      { surface: 'だから', kana: 'だから' },
-      { surface: 'ここ', kana: 'ここ' },
-      { surface: 'でも', kana: 'でも' },
-      { surface: 'ただ', kana: 'ただ' },
-      { surface: '先生', kana: 'せんせい' },
-      { surface: 'と', kana: 'と' },
-      { surface: '書く', kana: 'かく' },
-      { surface: 'だけ', kana: 'だけ' },
-      { surface: 'で', kana: 'で' },
-      { surface: '本名', kana: 'ほんみょう' },
-      { surface: 'は', kana: 'は' },
-      { surface: '打ち明けない', kana: 'うちあけない' },
-      { surface: '。', kana: null },
-    ],
-  },
-  ...AOZORA_PASSAGES,
-]
+export const JP_ARTICLES = JA_ARTICLE_BANK.map(({ title, text }) => ({
+  title,
+  segments: segmentsFromAozoraText(text),
+}))
 
 /**
  * @param {JpPassage} passage

@@ -375,20 +375,23 @@ export function bootJapanese(root) {
     const { min, max } = articleLengthBounds()
     const typed = typedArticleSources()
     const speaking = speakingFillerSources()
-    const sources = [...typed, ...speaking]
+    // Dedupe by title — typing and speaking now share the same bank
+    const byTitle = new Map()
+    for (const p of [...typed, ...speaking]) {
+      if (p?.title && !byTitle.has(p.title)) byTitle.set(p.title, p)
+    }
+    const sources = [...byTitle.values()]
     if (!sources.length) return null
 
     // Prefer a typed base that already meets min when possible.
-    const typedLongEnough = typed.filter((p) => countJapaneseChars(p) >= min)
-    const basePool = typedLongEnough.length ? typedLongEnough : typed.length ? typed : sources
+    const typedLongEnough = sources.filter((p) => countJapaneseChars(p) >= min)
+    const basePool = typedLongEnough.length ? typedLongEnough : sources
     const base = shufflePick(basePool, avoid)
     if (!base) return null
 
-    // Typed fillers first, then speaking bulk, then allow cycling via fitJapanesePassage.
-    const fillers = [
-      ...typed.filter((p) => p !== base).sort(() => Math.random() - 0.5),
-      ...speaking.filter((p) => p !== base).sort(() => Math.random() - 0.5),
-    ]
+    const fillers = sources
+      .filter((p) => p !== base)
+      .sort(() => Math.random() - 0.5)
     return fitJapanesePassage(base, min, max, fillers)
   }
 
@@ -421,16 +424,15 @@ export function bootJapanese(root) {
     const { min, max } = articleLengthBounds()
     const typed = typedArticleSources()
     const speaking = speakingFillerSources()
+    const byTitle = new Map()
+    for (const p of [...typed, ...speaking]) {
+      if (p?.title && !byTitle.has(p.title)) byTitle.set(p.title, p)
+    }
+    const sources = [...byTitle.values()]
     const base =
-      typed.find((p) => p.title === state.passage.title) ||
-      typed[0] ||
-      speaking.find((p) => p.title === state.passage.title) ||
-      speaking[0]
+      sources.find((p) => p.title === state.passage.title) || sources[0]
     if (!base) return false
-    const fillers = [
-      ...typed.filter((p) => p !== base),
-      ...speaking.filter((p) => p !== base),
-    ].sort(() => Math.random() - 0.5)
+    const fillers = sources.filter((p) => p !== base).sort(() => Math.random() - 0.5)
     const fitted = fitJapanesePassage(base, min, max, fillers)
     if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
       state.passageHistory[state.historyIndex] = fitted

@@ -1,6 +1,7 @@
 /** Offline speaking lesson bank (ported from daily-language-practice). */
 
 import { ARTICLES as ZH_ARTICLES, SENTENCES as ZH_SENTENCES } from '../data.js'
+import { bankAsSpeakLessons } from '../japanese/articleBank.js'
 
 export const FALLBACK_LESSONS = {
   en: [
@@ -85,72 +86,7 @@ It is easy to treat bookkeeping as a mundane, purely technical exercise, but the
       ],
     },
   ],
-  ja: [
-    {
-      title: '週末の予定',
-      article: `今週の週末は久しぶりに何も予定がないので、少しゆっくりしようと思っています。土曜日の朝は、いつもより遅く起きて、近くの公園を散歩するつもりです。最近、天気がいい日が続いているので、外を歩くのがとても気持ちいいです。
-
-お昼は友達と駅前の新しいカフェに行く約束をしています。そのカフェはSNSで話題になっていて、写真もとてもきれいでした。パンケーキが人気らしいので、二人で頼んでみようと話しています。友達とは久しぶりに会うので、最近あったことをゆっくり話したいです。
-
-午後は特に予定がないので、家で本を読んだり、映画を見たりするかもしれません。実は先週買った本がまだ読み終わっていないので、少しずつ読み進めたいです。夜は簡単な料理を作って、早めに寝るつもりです。日曜日は掃除と洗濯をして、来週の準備をしようと思っています。`,
-      estimatedMinutes: 4,
-      words: [
-        { word: '久しぶり', reading: 'ひさしぶり', meaning: 'after a long time / it\'s been a while', example: '久しぶりに大学の友達に会った。', exampleTranslation: 'I met my college friend for the first time in a long while.' },
-        { word: '話題になる', reading: 'わだいになる', meaning: 'to become a topic of conversation / to become popular talk', example: 'この店は最近、話題になっている。', exampleTranslation: 'This shop has become popular talk recently.' },
-        { word: '読み進める', reading: 'よみすすめる', meaning: 'to keep reading / to make progress reading', example: '忙しくて本を読み進めることができなかった。', exampleTranslation: 'I was too busy to keep making progress reading the book.' },
-        { word: 'ゆっくりする', reading: 'ゆっくりする', meaning: 'to relax / to take it easy', example: '疲れたので、今日は家でゆっくりする。', exampleTranslation: 'I\'m tired, so I\'ll relax at home today.' },
-        { word: '準備をする', reading: 'じゅんびをする', meaning: 'to prepare / to get ready', example: '旅行の準備をするのに時間がかかった。', exampleTranslation: 'It took time to prepare for the trip.' },
-      ],
-    },
-    {
-      title: '新しいカフェ',
-      article: `先週、会社の近くに新しいカフェがオープンしました。前を通るたびに気になっていたので、今日の昼休みに初めて入ってみました。店内はとても静かで、木のテーブルと椅子がたくさん並んでいました。窓が大きくて、外の景色がよく見えるのも気に入りました。
-
-メニューを見ると、コーヒーの種類がとても多くて、どれにするか迷ってしまいました。店員さんに人気のメニューを聞いたら、季節限定のカフェラテを勧めてくれたので、それを頼んでみることにしました。少し甘くて、とてもおいしかったです。
-
-一緒に頼んだサンドイッチも野菜がたっぷり入っていて、健康的な感じがしました。値段は少し高めでしたが、雰囲気がいいので、また来たいと思いました。同僚にも教えてあげたら、みんな行ってみたいと言っていました。今度は休みの日に、もう少しゆっくり過ごしに来たいです。`,
-      estimatedMinutes: 4,
-      words: [
-        { word: '気になる', reading: 'きになる', meaning: 'to be curious about / to be on one\'s mind', example: 'あの新しい映画がずっと気になっている。', exampleTranslation: 'That new movie has been on my mind for a while.' },
-        { word: '迷う', reading: 'まよう', meaning: 'to be unable to decide / to hesitate', example: 'どちらの服を買うか迷っている。', exampleTranslation: 'I can\'t decide which clothes to buy.' },
-        { word: '季節限定', reading: 'きせつげんてい', meaning: 'seasonal limited edition', example: '季節限定のケーキを買いに行った。', exampleTranslation: 'I went to buy the seasonal limited-edition cake.' },
-        { word: 'たっぷり', reading: 'たっぷり', meaning: 'plentifully / in abundance', example: '野菜がたっぷり入ったスープが好きだ。', exampleTranslation: 'I like soup that\'s full of plenty of vegetables.' },
-        { word: '雰囲気', reading: 'ふんいき', meaning: 'atmosphere / ambience', example: 'このレストランは雰囲気がとてもいい。', exampleTranslation: 'This restaurant has a really nice atmosphere.' },
-      ],
-    },
-    {
-      title: '引っ越しの話',
-      article: `来月、今の部屋から新しいアパートに引っ越すことになりました。今の部屋に住んで三年になりますが、会社まで少し遠いので、もっと近い場所を探していました。先週、駅から歩いて五分のアパートを見つけて、すぐに契約を決めました。
-
-引っ越しは初めてではありませんが、荷物が多くて少し大変です。特に本と食器が多くて、箱に詰めるのに時間がかかっています。週末に友達が手伝いに来てくれることになったので、少し安心しました。
-
-新しいアパートは前の部屋より少し狭いですが、駅に近いので、朝の時間に余裕ができそうです。近くにスーパーやコンビニもあるので、生活はとても便利になると思います。引っ越しの日は業者にお願いする予定ですが、それでもやることがたくさんあって、少し疲れそうです。早く新しい生活に慣れたいです。`,
-      estimatedMinutes: 4,
-      words: [
-        { word: '契約', reading: 'けいやく', meaning: 'contract / agreement', example: 'アパートの契約を来週するつもりだ。', exampleTranslation: 'I plan to sign the apartment contract next week.' },
-        { word: '詰める', reading: 'つめる', meaning: 'to pack / to stuff into', example: 'スーツケースに服をたくさん詰めた。', exampleTranslation: 'I packed a lot of clothes into the suitcase.' },
-        { word: '余裕ができる', reading: 'よゆうができる', meaning: 'to have (more) room/leeway, e.g. in time or money', example: '引っ越してから、朝の時間に余裕ができた。', exampleTranslation: 'Since moving, I\'ve had more leeway in my morning time.' },
-        { word: '業者', reading: 'ぎょうしゃ', meaning: 'a company/vendor providing a service (e.g. movers)', example: '引っ越しの業者にお願いすることにした。', exampleTranslation: 'I decided to ask a moving company for help.' },
-        { word: '慣れる', reading: 'なれる', meaning: 'to get used to / to become accustomed to', example: '新しい仕事にまだ慣れていない。', exampleTranslation: 'I\'m not used to the new job yet.' },
-      ],
-    },
-    {
-      title: '雨の日の過ごし方',
-      article: `今日は朝から雨が降っていて、外に出るのが少し面倒だなと思いました。でも、雨の日には雨の日なりの楽しみ方があると気づいてから、前ほど嫌いではなくなりました。今日は久しぶりに家でゆっくり過ごすことにしました。
-
-まず、お気に入りの音楽をかけながら、部屋の掃除をしました。窓の外の雨の音を聞きながら掃除をすると、なぜか気持ちが落ち着きます。掃除が終わったあとは、温かいお茶を入れて、ソファでのんびり本を読みました。
-
-お昼は冷蔵庫にあった野菜でスープを作りました。寒い日に温かいスープを飲むと、体も心もほっとします。午後は録画していたドラマを見て過ごしました。こんな静かな一日も、たまにはいいなと思います。明日は晴れるといいのですが、今日はこのまま雨の音を楽しみたいと思います。`,
-      estimatedMinutes: 4,
-      words: [
-        { word: '面倒', reading: 'めんどう', meaning: 'troublesome / a hassle', example: '雨の日に出かけるのは面倒だ。', exampleTranslation: 'Going out on a rainy day is a hassle.' },
-        { word: '気づく', reading: 'きづく', meaning: 'to notice / to realize', example: '財布を忘れたことに駅で気づいた。', exampleTranslation: 'I noticed I had forgotten my wallet at the station.' },
-        { word: '落ち着く', reading: 'おちつく', meaning: 'to calm down / to feel settled', example: 'お茶を飲むと気持ちが落ち着く。', exampleTranslation: 'Drinking tea calms me down.' },
-        { word: 'ほっとする', reading: 'ほっとする', meaning: 'to feel relieved / to feel at ease', example: '試験が終わって、ほっとした。', exampleTranslation: 'I felt relieved once the exam was over.' },
-        { word: 'たまには', reading: 'たまには', meaning: 'once in a while / occasionally', example: 'たまには何もしない日があってもいい。', exampleTranslation: 'It\'s fine to have a do-nothing day once in a while.' },
-      ],
-    },
-  ],
+  ja: bankAsSpeakLessons(),
 };
 
 /** Built-in Chinese speaking bank from typing passages + short prose. */
