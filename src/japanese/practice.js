@@ -734,9 +734,12 @@ export function bootJapanese(root) {
         }
         const classes = ['jp-seg']
         if (!seg.kana) classes.push('jp-punct')
+        if (seg.surface === ' ' || seg.surface === '\u3000') classes.push('jp-space')
         if (doneSeg.has(i)) classes.push('done')
         if (cur && i === cur.index) classes.push('current')
-        return `<span class="${classes.join(' ')}" data-seg="${i}">${escapeHtml(seg.surface)}</span>`
+        const show =
+          seg.surface === ' ' || seg.surface === '\u3000' ? '&nbsp;' : escapeHtml(seg.surface)
+        return `<span class="${classes.join(' ')}" data-seg="${i}">${show}</span>`
       })
       .join('')
 

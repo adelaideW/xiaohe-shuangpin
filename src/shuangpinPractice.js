@@ -25,6 +25,14 @@ import { extractFromFile } from './upload.js'
 import { loadUserLibrary, addUserDoc, removeUserDoc } from './userLibrary.js'
 import { PUNCT_KEYS, punctTypingKey } from './punct.js'
 
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 const STORAGE_MODE = 'xiaohe-practice-mode'
 const STORAGE_BEST = 'xiaohe-best-combo'
 
@@ -1292,7 +1300,9 @@ function renderPassageStage() {
       const classes = ['ch']
       if (doneIndexes.has(i)) classes.push('done')
       if (i === currentIndex) classes.push('current')
-      return `<span class="${classes.join(' ')}" data-i="${i}">${ch}</span>`
+      if (ch === ' ' || ch === '\u3000') classes.push('ch-space')
+      const show = ch === ' ' || ch === '\u3000' ? '&nbsp;' : escapeHtml(ch)
+      return `<span class="${classes.join(' ')}" data-i="${i}">${show}</span>`
     })
     .join('')
 
