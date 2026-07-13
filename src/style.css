@@ -659,11 +659,7 @@ body::before {
 }
 
 .word-display {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: baseline;
-  gap: 0.02em;
+  display: block;
   max-width: 100%;
   text-align: center;
 }
@@ -677,35 +673,6 @@ body::before {
 .word-display.jp-word {
   font-size: clamp(4rem, 12vw, 6.25rem);
   letter-spacing: 0.06em;
-}
-
-.word-display .word-ch {
-  transition: color 0.12s, opacity 0.12s;
-}
-
-.word-display .word-ch.done {
-  color: var(--muted);
-  opacity: 0.55;
-}
-
-.word-display .word-ch.current {
-  color: var(--jade-deep);
-  position: relative;
-}
-
-.word-display .word-ch.current::after {
-  content: '';
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 0.06em;
-  height: 0.08em;
-  border-radius: 999px;
-  background: var(--jade);
-}
-
-.word-display .word-ch.wrong {
-  color: var(--coral);
 }
 
 @keyframes pop {

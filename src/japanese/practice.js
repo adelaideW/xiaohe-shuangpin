@@ -607,7 +607,7 @@ export function bootJapanese(root) {
     if (!state.passage || state.completed || state.sessionFinished) return
     const cur = currentTarget()
     const doneSeg = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-    document.querySelectorAll('.jp-seg, .word-display .word-ch').forEach((el) => {
+    document.querySelectorAll('.jp-seg').forEach((el) => {
       const i = Number(el.dataset.seg)
       el.classList.toggle('done', doneSeg.has(i))
       el.classList.toggle('current', cur && i === cur.index)
@@ -721,16 +721,7 @@ export function bootJapanese(root) {
 
     const segs = state.passage.segments || []
     const cur = currentTarget()
-    const doneSeg = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-    const letters = segs
-      .map((seg, i) => {
-        const classes = ['word-ch']
-        if (!seg.kana) classes.push('jp-punct')
-        if (doneSeg.has(i)) classes.push('done')
-        if (cur && i === cur.index) classes.push('current')
-        return `<span class="${classes.join(' ')}" data-seg="${i}">${escapeHtml(seg.surface)}</span>`
-      })
-      .join('')
+    const word = segs.map((seg) => seg.surface).join('')
 
     const exp = currentExpected()
     const slots = [...exp]
@@ -751,7 +742,7 @@ export function bootJapanese(root) {
 
     return `
       <div class="char-stage word-stage">
-        <div class="hanzi word-display jp-word">${letters}</div>
+        <div class="hanzi word-display jp-word">${escapeHtml(word)}</div>
         <div class="pinyin-line">${hintText}</div>
         <div class="code-progress">${slots}</div>
       </div>`
