@@ -16,6 +16,7 @@ const STORAGE_KEY = 'xiaohe-settings'
  * @property {boolean} keyboardCovered
  * @property {boolean} speakOnCorrect
  * @property {boolean} autoAdvancePerfect
+ * @property {boolean} autoAdvanceWithMistakes
  * @property {number} durationMinutes
  */
 
@@ -28,6 +29,7 @@ export const DEFAULT_SETTINGS = {
   keyboardCovered: false,
   speakOnCorrect: false,
   autoAdvancePerfect: true,
+  autoAdvanceWithMistakes: false,
   durationMinutes: 5,
 }
 

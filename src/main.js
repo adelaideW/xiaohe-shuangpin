@@ -349,16 +349,23 @@ function ensureSession() {
   return true
 }
 
+function redoCurrentPassage() {
+  if (!state.passage) return
+  clearAdvanceTimer()
+  loadPassageAt(state.passage)
+  render()
+  focusApp()
+}
+
 function onPassageComplete() {
   state.passagesDone += 1
   const clean = state.passageWrong === 0
-  // Auto-advance on a perfect pass while practicing (timer optional but preferred)
-  const autoOk =
-    settings.autoAdvancePerfect &&
-    clean &&
-    !state.sessionFinished
+  const canAuto =
+    !state.sessionFinished &&
+    ((clean && settings.autoAdvancePerfect) ||
+      (!clean && settings.autoAdvanceWithMistakes))
 
-  if (autoOk) {
+  if (canAuto) {
     clearAdvanceTimer()
     state.completed = false
     state.autoAdvanceNote = ''
@@ -367,7 +374,7 @@ function onPassageComplete() {
   }
 
   state.completed = true
-  state.autoAdvanceNote = clean ? '' : '有错字 · 点下一篇继续'
+  state.autoAdvanceNote = clean ? '' : '有错字 · 可重练或继续下一篇'
   render()
 }
 
@@ -710,6 +717,10 @@ function renderSettingsDrawer() {
             <input type="checkbox" id="set-auto-advance" ${settings.autoAdvancePerfect ? 'checked' : ''} />
             <span>全对时自动下一篇</span>
           </label>
+          <label class="opt-row">
+            <input type="checkbox" id="set-auto-advance-mistakes" ${settings.autoAdvanceWithMistakes ? 'checked' : ''} />
+            <span>有错字时也自动下一篇</span>
+          </label>
         </section>
       </div>
       <div class="drawer-foot">
@@ -878,11 +889,13 @@ function renderPassageStage() {
   if (state.sessionFinished) return renderSessionSummary()
 
   if (state.completed) {
+    const hasMistakes = state.passageWrong > 0
     return `
       <div class="complete-banner">
-        <h2>${state.passageWrong === 0 ? '全部正确！' : '本篇完成'}</h2>
+        <h2>${hasMistakes ? '本篇完成' : '全部正确！'}</h2>
         <p>${state.autoAdvanceNote || `准确率 ${accuracy()}% · ${cpm()} 字/分`}</p>
         <div class="toolbar">
+          ${hasMistakes ? `<button type="button" id="btn-redo-passage">重练本篇</button>` : ''}
           <button type="button" class="primary" id="btn-next-passage">下一篇</button>
         </div>
       </div>
@@ -1061,6 +1074,11 @@ function bindEvents() {
     goNextPassage()
   })
 
+  document.querySelector('#btn-redo-passage')?.addEventListener('click', () => {
+    if (state.sessionFinished) return
+    redoCurrentPassage()
+  })
+
   document.querySelector('#btn-prev-passage')?.addEventListener('click', goPrevPassage)
   document.querySelector('#btn-next-passage-nav')?.addEventListener('click', goNextPassage)
 
@@ -1115,6 +1133,9 @@ function bindEvents() {
   })
   document.querySelector('#set-auto-advance')?.addEventListener('change', (e) => {
     applySettingsPatch({ autoAdvancePerfect: e.target.checked })
+  })
+  document.querySelector('#set-auto-advance-mistakes')?.addEventListener('change', (e) => {
+    applySettingsPatch({ autoAdvanceWithMistakes: e.target.checked })
   })
 
   const mirror = document.querySelector('#key-mirror')
