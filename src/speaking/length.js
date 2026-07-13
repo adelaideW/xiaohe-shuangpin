@@ -57,6 +57,23 @@ export function trimSpeakText(text, language, budget) {
   for (const chunk of chunks) {
     const m = speakMeasure(chunk, language)
     if (acc && used + m > limit) break
+    if (!acc && m > limit) {
+      // Oversized single chunk: hard-trim by measure units
+      if (language === 'en') {
+        const words = chunk.match(/[A-Za-z0-9']+|\s+|[^\sA-Za-z0-9']+/g) || []
+        let wAcc = ''
+        let wCount = 0
+        for (const part of words) {
+          const isWord = /^[A-Za-z0-9']+$/.test(part)
+          if (isWord && wCount >= limit) break
+          wAcc += part
+          if (isWord) wCount += 1
+        }
+        return wAcc.replace(/\s+$/g, '').trim()
+      }
+      const chars = [...chunk].filter((ch) => !/\s/.test(ch))
+      return chars.slice(0, limit).join('')
+    }
     acc = language === 'en' ? (acc ? `${acc} ${chunk}` : chunk) : `${acc}${chunk}`
     used += m
     if (used >= limit) break
@@ -113,7 +130,7 @@ export function fitLessonToSpeakLimit(lesson, language, settings) {
       : speakBudgetFromMinutes(language, settings.speakMinMinutes || 1)
   if (minBudget > maxBudget) minBudget = maxBudget
 
-  const source = lesson.article || ''
+  const source = lesson.sourceArticle || lesson.article || ''
   let article = trimSpeakText(source, language, maxBudget)
   if (speakMeasure(article, language) < minBudget) {
     article = ensureMinSpeakText(source, language, minBudget)
@@ -131,7 +148,14 @@ export function fitLessonToSpeakLimit(lesson, language, settings) {
         )
       : Math.max(1, Math.ceil(measure / (language === 'en' ? 140 : 220)))
 
-  return { ...lesson, article, estimatedMinutes, speakMeasure: measure, speakLimitMode: mode }
+  return {
+    ...lesson,
+    sourceArticle: source,
+    article,
+    estimatedMinutes,
+    speakMeasure: measure,
+    speakLimitMode: mode,
+  }
 }
 
 /** Defaults shared across EN / JA / ZH settings objects. */

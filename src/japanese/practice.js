@@ -624,6 +624,11 @@ export function bootJapanese(root) {
       return
     }
 
+    if (patch.charsPerPage != null) {
+      render()
+      return
+    }
+
     if (state.drawer === 'settings') {
       if (lengthChanged || 'speakShowHiragana' in patch) {
         render()

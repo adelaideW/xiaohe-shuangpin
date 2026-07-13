@@ -364,6 +364,22 @@ export function bootEnglish(root) {
     return fitEnglishPassage(basePassage, min, max, fillers)
   }
 
+  function refitCurrentArticle() {
+    if (state.mode !== 'article' || !state.passage) return false
+    const { min, max } = articleLengthBounds()
+    const sources = allEnglishArticleSources()
+    const base =
+      sources.find((p) => p.title === state.passage.title) || sources[0]
+    if (!base) return false
+    const fillers = sources.filter((p) => p !== base).sort(() => Math.random() - 0.5)
+    const fitted = fitEnglishPassage(base, min, max, fillers)
+    if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
+      state.passageHistory[state.historyIndex] = fitted
+    }
+    loadPassageAt(fitted)
+    return true
+  }
+
   function pickPassage(mode) {
     if (mode === 'word') {
       const pool = settings.smartPractice
@@ -492,14 +508,27 @@ export function bootEnglish(root) {
       state.pages = buildEnglishPages(state.units, settings.charsPerPage)
       state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
     }
+
+    const lengthChanged =
+      'speakLimitMode' in patch ||
+      'speakMaxMinutes' in patch ||
+      'speakMinMinutes' in patch ||
+      'speakMaxCount' in patch ||
+      'speakMinCount' in patch
+
+    if (lengthChanged && state.mode === 'article') {
+      refitCurrentArticle()
+      render()
+      return
+    }
+
+    if (patch.charsPerPage != null) {
+      render()
+      return
+    }
+
     if (state.drawer === 'settings') {
-      if (
-        'speakLimitMode' in patch ||
-        'speakMaxMinutes' in patch ||
-        'speakMinMinutes' in patch ||
-        'speakMaxCount' in patch ||
-        'speakMinCount' in patch
-      ) {
+      if (lengthChanged) {
         render()
       } else if ('timerMode' in patch) {
         renderTimerControls()

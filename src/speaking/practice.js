@@ -85,6 +85,19 @@ export function bootSpeaking(root, opts) {
         : language === 'zh'
           ? saveSettings(patch)
           : saveEnglishSettings(patch)
+    const source = {
+      ...state.lesson,
+      article: state.lesson.sourceArticle || state.lesson.article,
+    }
+    state.lesson = fitLessonToSpeakLimit(source, language, settings)
+    saveJSON(`${storagePrefix}-lesson`, state.lesson)
+    state.index = 0
+    state.results = []
+    persistResults()
+    state.manualText = ''
+    state.transcript = ''
+    state.gradeError = ''
+    render()
   }
 
   function chooseLesson(avoidTitles = []) {
@@ -750,7 +763,6 @@ export function bootSpeaking(root, opts) {
       el.addEventListener('change', (e) => {
         if (!e.target.checked) return
         applySpeakLimitPatch({ speakLimitMode: e.target.value === 'count' ? 'count' : 'time' })
-        render()
       })
     })
     root.querySelector('#set-speak-minutes')?.addEventListener('change', (e) => {

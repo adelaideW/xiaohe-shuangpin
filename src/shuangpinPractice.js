@@ -20,12 +20,15 @@ import {
   countHanzi,
   buildPages,
   pageIndexForUnit,
+  fitChinesePassage,
 } from './pinyinText.js'
 import { extractFromFile } from './upload.js'
 import { loadUserLibrary, addUserDoc, removeUserDoc } from './userLibrary.js'
 import { punctTypingKey, isPracticeTypingKey } from './punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
 import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
+import { speakBudgetFromMinutes } from './speaking/length.js'
+import { FALLBACK_LESSONS } from './speaking/lessons.js'
 
 function escapeHtml(s) {
   return String(s)
@@ -378,22 +381,61 @@ function safePassageFromText(title, text) {
   }
 }
 
-function getArticlePool() {
-  const min = settings.speakMinCount || settings.minArticleChars || 20
-  const poems = ARTICLES.filter((p) => countHanzi(p.text) >= min)
-  const lib = LIBRARY_TEXTS.map((t) => safePassageFromText(t.title, t.text)).filter(
-    (p) => p && countHanzi(p.text) >= min,
-  )
+function articleLengthBounds() {
+  if (settings.speakLimitMode === 'count') {
+    let min = Math.max(1, Number(settings.speakMinCount) || 60)
+    let max = Math.max(1, Number(settings.speakMaxCount) || 200)
+    if (min > max) min = max
+    return { min, max }
+  }
+  const min = speakBudgetFromMinutes('zh', settings.speakMinMinutes || 1)
+  const max = speakBudgetFromMinutes('zh', settings.speakMaxMinutes || 5)
+  return { min: Math.min(min, max), max: Math.max(min, max) }
+}
+
+function allChineseArticleSources() {
+  const poems = ARTICLES
+  const lib = LIBRARY_TEXTS.map((t) => safePassageFromText(t.title, t.text)).filter(Boolean)
   const user = loadUserLibrary()
     .map((d) => safePassageFromText(d.title, d.text))
-    .filter((p) => p && countHanzi(p.text) >= min)
-  const pool = [...poems, ...lib, ...user]
-  return pool.length ? pool : ARTICLES
+    .filter(Boolean)
+  const speaking = (FALLBACK_LESSONS.zh || [])
+    .map((l) => safePassageFromText(l.title, l.article))
+    .filter(Boolean)
+  return [...poems, ...lib, ...speaking, ...user]
+}
+
+function pickFittedArticle(avoid) {
+  const { min, max } = articleLengthBounds()
+  const sources = allChineseArticleSources()
+  if (!sources.length) return null
+  const longEnough = sources.filter((p) => countHanzi(p.text) >= min)
+  const basePool = longEnough.length ? longEnough : sources
+  const base = shufflePick(basePool, avoid)
+  if (!base) return null
+  const fillers = sources.filter((p) => p !== base).sort(() => Math.random() - 0.5)
+  return fitChinesePassage(base, min, max, fillers)
+}
+
+function refitCurrentArticle() {
+  if (state.mode !== 'article' || !state.passage) return false
+  const { min, max } = articleLengthBounds()
+  const sources = allChineseArticleSources()
+  const base =
+    sources.find((p) => p.title === state.passage.title) || sources[0]
+  if (!base) return false
+  const fillers = sources.filter((p) => p !== base).sort(() => Math.random() - 0.5)
+  const fitted = fitChinesePassage(base, min, max, fillers)
+  if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
+    state.passageHistory[state.historyIndex] = fitted
+  }
+  loadPassageAt(fitted)
+  return true
 }
 
 function pickNewPassage(mode) {
   if (mode === 'article') {
-    return shufflePick(getArticlePool(), state.passage)
+    return pickFittedArticle(state.passage)
   }
   if (settings.smartPractice) {
     const pool = smartPassagePool('sentence')
@@ -556,15 +598,27 @@ function applySettingsPatch(patch) {
     state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
   }
 
+  const lengthChanged =
+    'speakLimitMode' in patch ||
+    'speakMaxMinutes' in patch ||
+    'speakMinMinutes' in patch ||
+    'speakMaxCount' in patch ||
+    'speakMinCount' in patch
+
+  if (lengthChanged && state.mode === 'article') {
+    refitCurrentArticle()
+    render()
+    return
+  }
+
+  if (patch.charsPerPage != null) {
+    render()
+    return
+  }
+
   // While settings drawer is open, avoid full-page rebuild (causes blink)
   if (state.drawer === 'settings') {
-    if (
-      'speakLimitMode' in patch ||
-      'speakMaxMinutes' in patch ||
-      'speakMinMinutes' in patch ||
-      'speakMaxCount' in patch ||
-      'speakMinCount' in patch
-    ) {
+    if (lengthChanged) {
       render()
       return
     }

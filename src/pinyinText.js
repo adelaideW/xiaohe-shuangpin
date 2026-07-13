@@ -221,6 +221,55 @@ export function countHanzi(text) {
 }
 
 /**
+ * Grow/trim a Chinese typing passage to [minChars, maxChars] hanzi.
+ * @param {{ title: string, text: string, pinyin?: (string|null)[] }} passage
+ * @param {number} minChars
+ * @param {number} maxChars
+ * @param {{ title: string, text: string, pinyin?: (string|null)[] }[]} [extraPassages]
+ */
+export function fitChinesePassage(passage, minChars, maxChars, extraPassages = []) {
+  let min = Math.max(1, Math.floor(Number(minChars) || 1))
+  let max = Math.max(1, Math.floor(Number(maxChars) || min))
+  if (min > max) min = max
+
+  const pool = [passage, ...extraPassages].filter((p) => p?.text && countHanzi(p.text) > 0)
+  if (!pool.length) {
+    return passage || { title: '文章', text: '', pinyin: [] }
+  }
+
+  let text = String(passage?.text || '')
+  const extrasFirst = pool.filter((p) => p !== passage)
+  const cycle = extrasFirst.length ? [...extrasFirst, passage] : pool
+  let guard = 0
+  let idx = 0
+  while (countHanzi(text) < min && guard < 40) {
+    const next = cycle[idx % cycle.length]
+    idx += 1
+    guard += 1
+    const chunk = String(next?.text || '').trim()
+    if (!chunk) continue
+    text = text ? `${text}${/[。！？\n]$/.test(text) ? '' : '。'}${chunk}` : chunk
+  }
+
+  if (countHanzi(text) > max) {
+    let count = 0
+    let acc = ''
+    for (const ch of text) {
+      if (isHanzi(ch) && count >= max) break
+      acc += ch
+      if (isHanzi(ch)) count += 1
+    }
+    text = acc
+  }
+
+  try {
+    return passageFromText(passage?.title || '文章', text)
+  } catch {
+    return { title: passage?.title || '文章', text, pinyin: [] }
+  }
+}
+
+/**
  * Split units into pages by hanzi count.
  * @param {{ index: number }[]} units
  * @param {number} charsPerPage
