@@ -548,7 +548,9 @@ function applySettingsPatch(patch) {
     if (
       'speakLimitMode' in patch ||
       'speakMaxMinutes' in patch ||
-      'speakMaxCount' in patch
+      'speakMinMinutes' in patch ||
+      'speakMaxCount' in patch ||
+      'speakMinCount' in patch
     ) {
       render()
       return
@@ -1064,17 +1066,29 @@ function renderSettingsDrawer() {
             <p class="drawer-lead" style="margin-bottom:0.5rem">口语长度 — <strong>时间</strong>与<strong>字数</strong>二选一</p>
             <label class="opt-row">
               <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
-              <span>最长分钟</span>
+              <span>时间</span>
             </label>
             <label class="field-row field-row-unit">
+              <span class="unit-prefix">最少</span>
+              <input type="number" id="set-speak-min-minutes" min="1" max="30" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <span class="unit">分钟</span>
+            </label>
+            <label class="field-row field-row-unit">
+              <span class="unit-prefix">最多</span>
               <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
               <span class="unit">分钟</span>
             </label>
             <label class="opt-row">
               <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
-              <span>最多字数</span>
+              <span>字数</span>
             </label>
             <label class="field-row field-row-unit">
+              <span class="unit-prefix">最少</span>
+              <input type="number" id="set-speak-min-count" min="10" max="2000" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <span class="unit">字</span>
+            </label>
+            <label class="field-row field-row-unit">
+              <span class="unit-prefix">最多</span>
               <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
               <span class="unit">字</span>
             </label>
@@ -1104,18 +1118,20 @@ function renderTimerBar() {
 
   return `
     <div class="timer-bar">
-      <div class="timer-left">
-        <span class="timer-label">练习时长</span>
-        <div class="dur-group">
-          ${presets}
-          <label class="custom-dur" title="自定义分钟">
-            <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} aria-label="自定义分钟" />
-            <span>分</span>
-          </label>
+      <div class="timer-bar-inner">
+        <div class="timer-left">
+          <span class="timer-label">练习时长</span>
+          <div class="dur-group">
+            ${presets}
+            <label class="custom-dur" title="自定义分钟">
+              <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} aria-label="自定义分钟" />
+              <span>分</span>
+            </label>
+          </div>
         </div>
-      </div>
-      <div class="timer-right">
-        ${timerRightHtml()}
+        <div class="timer-right">
+          ${timerRightHtml()}
+        </div>
       </div>
     </div>
   `
@@ -1591,8 +1607,14 @@ function bindEvents() {
   document.querySelector('#set-speak-minutes')?.addEventListener('change', (e) => {
     applySettingsPatch({ speakMaxMinutes: Number(e.target.value) || 5 })
   })
+  document.querySelector('#set-speak-min-minutes')?.addEventListener('change', (e) => {
+    applySettingsPatch({ speakMinMinutes: Number(e.target.value) || 1 })
+  })
   document.querySelector('#set-speak-count')?.addEventListener('change', (e) => {
     applySettingsPatch({ speakMaxCount: Number(e.target.value) || 200 })
+  })
+  document.querySelector('#set-speak-min-count')?.addEventListener('change', (e) => {
+    applySettingsPatch({ speakMinCount: Number(e.target.value) || 60 })
   })
   document.querySelector('#set-auto-advance')?.addEventListener('change', (e) => {
     applySettingsPatch({ autoAdvancePerfect: e.target.checked })

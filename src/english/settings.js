@@ -17,14 +17,16 @@ const STORAGE_KEY = 'english-settings'
  * @property {boolean} speakOnCorrect
  * @property {boolean} speakOnSentenceClick
  * @property {SpeakLimitMode} speakLimitMode
+ * @property {number} speakMinMinutes
  * @property {number} speakMaxMinutes
+ * @property {number} speakMinCount
  * @property {number} speakMaxCount
  * @property {boolean} autoAdvancePerfect
  * @property {boolean} autoAdvanceWithMistakes
  * @property {boolean} caseSensitive
  * @property {number} durationMinutes
- * @property {number} minArticleChars
- * @property {number} charsPerPage
+ * @property {number} minArticleChars English: minimum words for articles
+ * @property {number} charsPerPage English: words per page
  */
 
 /** @type {EnglishSettings} */
@@ -40,8 +42,8 @@ export const DEFAULT_ENGLISH_SETTINGS = {
   autoAdvanceWithMistakes: true,
   caseSensitive: true,
   durationMinutes: 5,
-  minArticleChars: 40,
-  charsPerPage: 120,
+  minArticleChars: 20,
+  charsPerPage: 80,
 }
 
 /** @returns {EnglishSettings} */
@@ -51,11 +53,21 @@ export function loadEnglishSettings() {
     /** @type {EnglishSettings} */
     let base = { ...DEFAULT_ENGLISH_SETTINGS }
     if (raw) base = { ...DEFAULT_ENGLISH_SETTINGS, ...JSON.parse(raw) }
-    base.minArticleChars = Math.max(1, Math.min(2000, Number(base.minArticleChars) || 40))
-    base.charsPerPage = Math.max(20, Math.min(400, Number(base.charsPerPage) || 120))
+    base.minArticleChars = Math.max(1, Math.min(2000, Number(base.minArticleChars) || 20))
+    base.charsPerPage = Math.max(5, Math.min(500, Number(base.charsPerPage) || 80))
     base.durationMinutes = Math.max(1, Math.min(60, Number(base.durationMinutes) || 5))
     Object.assign(base, normalizeSpeakLimitSettings(base, 'en'))
-    // One-time: show keyboard by default (align with 双拼 / 日本語)
+    // One-time: migrate older char-based article mins that were way too high as words
+    if (!localStorage.getItem('english-mig-article-words') && base.minArticleChars > 200) {
+      base.minArticleChars = 20
+      base.charsPerPage = Math.min(80, base.charsPerPage)
+      localStorage.setItem('english-mig-article-words', '1')
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
+      } catch {
+        /* ignore */
+      }
+    }
     if (!localStorage.getItem('english-mig-kb-shown')) {
       base.keyboardCovered = false
       localStorage.setItem('english-mig-kb-shown', '1')

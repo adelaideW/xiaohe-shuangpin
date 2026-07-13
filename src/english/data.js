@@ -109,16 +109,32 @@ export function buildEnglishUnits(text) {
 }
 
 /**
- * @param {{ index: number }[]} units
- * @param {number} charsPerPage
+ * Build pages by approximate word count (letters/digits form words).
+ * @param {{ char: string, index: number }[]} units
+ * @param {number} wordsPerPage
  */
-export function buildEnglishPages(units, charsPerPage = 120) {
-  const size = Math.max(20, Math.min(400, Number(charsPerPage) || 120))
+export function buildEnglishPages(units, wordsPerPage = 80) {
+  const size = Math.max(5, Math.min(500, Number(wordsPerPage) || 80))
   if (!units.length) return [{ start: 0, end: 0 }]
   const pages = []
-  for (let i = 0; i < units.length; i += size) {
-    pages.push({ start: i, end: Math.min(units.length, i + size) })
+  let start = 0
+  let words = 0
+  let inWord = false
+  for (let i = 0; i < units.length; i++) {
+    const isWordChar = /[A-Za-z0-9']/.test(units[i].char)
+    if (isWordChar && !inWord) {
+      words += 1
+      inWord = true
+      if (words > size && i > start) {
+        pages.push({ start, end: i })
+        start = i
+        words = 1
+      }
+    } else if (!isWordChar) {
+      inWord = false
+    }
   }
+  pages.push({ start, end: units.length })
   return pages
 }
 

@@ -437,7 +437,9 @@ export function bootJapanese(root) {
       if (
         'speakLimitMode' in patch ||
         'speakMaxMinutes' in patch ||
-        'speakMaxCount' in patch
+        'speakMinMinutes' in patch ||
+        'speakMaxCount' in patch ||
+        'speakMinCount' in patch
       ) {
         render()
       } else if ('timerMode' in patch) {
@@ -673,16 +675,18 @@ export function bootJapanese(root) {
     ).join('')
     return `
       <div class="timer-bar">
-        <div class="timer-left">
-          <span class="timer-label">練習時間</span>
-          <div class="dur-group">${presets}
-            <label class="custom-dur">
-              <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} />
-              <span>分</span>
-            </label>
+        <div class="timer-bar-inner">
+          <div class="timer-left">
+            <span class="timer-label">練習時間</span>
+            <div class="dur-group">${presets}
+              <label class="custom-dur">
+                <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} />
+                <span>分</span>
+              </label>
+            </div>
           </div>
+          <div class="timer-right">${timerRightHtml()}</div>
         </div>
-        <div class="timer-right">${timerRightHtml()}</div>
       </div>`
   }
 
@@ -862,17 +866,29 @@ export function bootJapanese(root) {
               <p class="drawer-lead" style="margin-bottom:0.5rem">スピーキング長さ — <strong>時間</strong>か<strong>文字数</strong>のどちらか</p>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
-                <span>最大分数</span>
+                <span>時間</span>
               </label>
               <label class="field-row field-row-unit">
+                <span class="unit-prefix">最小</span>
+                <input type="number" id="set-speak-min-minutes" min="1" max="30" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+                <span class="unit">分</span>
+              </label>
+              <label class="field-row field-row-unit">
+                <span class="unit-prefix">最大</span>
                 <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
                 <span class="unit">分</span>
               </label>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
-                <span>最大文字数</span>
+                <span>文字数</span>
               </label>
               <label class="field-row field-row-unit">
+                <span class="unit-prefix">最小</span>
+                <input type="number" id="set-speak-min-count" min="10" max="2000" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+                <span class="unit">文字</span>
+              </label>
+              <label class="field-row field-row-unit">
+                <span class="unit-prefix">最大</span>
                 <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
                 <span class="unit">文字</span>
               </label>
@@ -1123,8 +1139,14 @@ export function bootJapanese(root) {
     document.querySelector('#set-speak-minutes')?.addEventListener('change', (e) =>
       applySettingsPatch({ speakMaxMinutes: Number(e.target.value) || 5 }),
     )
+    document.querySelector('#set-speak-min-minutes')?.addEventListener('change', (e) =>
+      applySettingsPatch({ speakMinMinutes: Number(e.target.value) || 1 }),
+    )
     document.querySelector('#set-speak-count')?.addEventListener('change', (e) =>
       applySettingsPatch({ speakMaxCount: Number(e.target.value) || 200 }),
+    )
+    document.querySelector('#set-speak-min-count')?.addEventListener('change', (e) =>
+      applySettingsPatch({ speakMinCount: Number(e.target.value) || 60 }),
     )
     document.querySelector('#set-auto-advance')?.addEventListener('change', (e) =>
       applySettingsPatch({ autoAdvancePerfect: e.target.checked }),

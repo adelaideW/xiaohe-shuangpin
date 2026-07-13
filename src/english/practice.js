@@ -15,6 +15,7 @@ import {
   buildEnglishPages,
   pageIndexForUnit,
   countEnglishChars,
+  countEnglishWords,
 } from './data.js'
 import {
   loadEnglishMistakes,
@@ -331,10 +332,10 @@ export function bootEnglish(root) {
 
   function getArticlePool() {
     const min = settings.minArticleChars
-    const built = ENGLISH_ARTICLES.filter((p) => countEnglishChars(p.text) >= min)
+    const built = ENGLISH_ARTICLES.filter((p) => countEnglishWords(p.text) >= min)
     const user = loadEnglishLibrary()
       .map((d) => ({ title: d.title, text: d.text }))
-      .filter((p) => countEnglishChars(p.text) >= min)
+      .filter((p) => countEnglishWords(p.text) >= min)
     const pool = [...built, ...user]
     return pool.length ? pool : ENGLISH_ARTICLES
   }
@@ -471,7 +472,9 @@ export function bootEnglish(root) {
       if (
         'speakLimitMode' in patch ||
         'speakMaxMinutes' in patch ||
-        'speakMaxCount' in patch
+        'speakMinMinutes' in patch ||
+        'speakMaxCount' in patch ||
+        'speakMinCount' in patch
       ) {
         render()
       } else if ('timerMode' in patch) {
@@ -666,7 +669,7 @@ export function bootEnglish(root) {
     values[2].textContent = String(state.best)
     values[3].textContent = `${accuracy()}%`
     values[4].textContent = String(state.startedAt ? wpm() : 0)
-    values[5].textContent = String(state.startedAt ? cpm() : 0)
+    values[5].textContent = String(state.keystrokes)
   }
 
   function expectedKeyLabel() {
@@ -729,7 +732,7 @@ export function bootEnglish(root) {
       state.passageHistory.push(passage)
       state.historyIndex = state.passageHistory.length - 1
       loadPassageAt(passage)
-      state.uploadMessage = `Added “${passage.title}” · ${countEnglishChars(passage.text)} chars`
+      state.uploadMessage = `Added “${passage.title}” · ${countEnglishWords(passage.text)} words`
       state.drawer = keepDrawer === 'settings' ? 'settings' : null
     } catch (err) {
       state.uploadMessage = err?.message || 'Upload failed'
@@ -748,17 +751,19 @@ export function bootEnglish(root) {
     ).join('')
     return `
       <div class="timer-bar">
-        <div class="timer-left">
-          <span class="timer-label">Session</span>
-          <div class="dur-group">
-            ${presets}
-            <label class="custom-dur" title="Custom minutes">
-              <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} aria-label="Custom minutes" />
-              <span>min</span>
-            </label>
+        <div class="timer-bar-inner">
+          <div class="timer-left">
+            <span class="timer-label">Session</span>
+            <div class="dur-group">
+              ${presets}
+              <label class="custom-dur" title="Custom minutes">
+                <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} aria-label="Custom minutes" />
+                <span>min</span>
+              </label>
+            </div>
           </div>
+          <div class="timer-right">${timerRightHtml()}</div>
         </div>
-        <div class="timer-right">${timerRightHtml()}</div>
       </div>
     `
   }
@@ -766,12 +771,12 @@ export function bootEnglish(root) {
   function renderStats() {
     return `
       <div class="stats">
-        <div class="stat"><span class="label">Typed</span><span class="value">${state.correct}</span></div>
+        <div class="stat"><span class="label">Correct</span><span class="value">${state.correct}</span></div>
         <div class="stat"><span class="label">Streak</span><span class="value">${state.combo}</span></div>
         <div class="stat"><span class="label">Best</span><span class="value">${state.best}</span></div>
         <div class="stat"><span class="label">Accuracy</span><span class="value">${accuracy()}%</span></div>
-        <div class="stat"><span class="label">WPM</span><span class="value">${state.startedAt ? wpm() : 0}</span></div>
-        <div class="stat"><span class="label">CPM</span><span class="value">${state.startedAt ? cpm() : 0}</span></div>
+        <div class="stat"><span class="label">Words/min</span><span class="value">${state.startedAt ? wpm() : 0}</span></div>
+        <div class="stat"><span class="label">Keystrokes</span><span class="value">${state.keystrokes}</span></div>
       </div>
     `
   }
@@ -925,7 +930,7 @@ export function bootEnglish(root) {
           <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="Close">×</button>
         </div>
         <div class="drawer-body">
-          <p class="drawer-lead">These settings apply only to English practice. Article length counts letters/digits (spaces & punctuation don't add to the count).</p>
+          <p class="drawer-lead">These settings apply only to English practice. Article length is measured in words.</p>
           <section class="drawer-section">
             <h3>Practice</h3>
             <label class="opt-row">
@@ -955,12 +960,12 @@ export function bootEnglish(root) {
           <section class="drawer-section">
             <h3>Articles</h3>
             <label class="opt-row stacked">
-              <span>Minimum characters (letters/digits only)</span>
+              <span>Minimum words</span>
               <input type="number" id="set-min-chars" min="1" max="2000" value="${settings.minArticleChars}" />
             </label>
             <label class="opt-row stacked">
-              <span>Characters per page (letters/digits)</span>
-              <input type="number" id="set-page-chars" min="20" max="400" value="${settings.charsPerPage}" />
+              <span>Words per page</span>
+              <input type="number" id="set-page-chars" min="5" max="500" value="${settings.charsPerPage}" />
             </label>
             <label class="opt-row">
               <span class="ghost-chip upload-chip">
@@ -973,7 +978,7 @@ export function bootEnglish(root) {
                 ? `<ul class="mistake-list compact user-lib">${lib
                     .map(
                       (d) =>
-                        `<li><span class="m-meta">${escapeHtml(d.title)}</span> <span class="m-count">${countEnglishChars(d.text)}</span> <button type="button" class="linkish" data-remove-doc="${d.id}">Delete</button></li>`,
+                        `<li><span class="m-meta">${escapeHtml(d.title)}</span> <span class="m-count">${countEnglishWords(d.text)} words</span> <button type="button" class="linkish" data-remove-doc="${d.id}">Delete</button></li>`,
                     )
                     .join('')}</ul>`
                 : '<p class="drawer-lead">No uploads yet</p>'
@@ -997,17 +1002,29 @@ export function bootEnglish(root) {
               <p class="drawer-lead" style="margin-bottom:0.5rem">Speaking length — use <strong>either</strong> time or word count</p>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" id="set-speak-mode-time" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
-                <span>Max minutes</span>
+                <span>Time limit</span>
               </label>
               <label class="field-row field-row-unit">
+                <span class="unit-prefix">Min</span>
+                <input type="number" id="set-speak-min-minutes" min="1" max="30" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+                <span class="unit">min</span>
+              </label>
+              <label class="field-row field-row-unit">
+                <span class="unit-prefix">Max</span>
                 <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
                 <span class="unit">min</span>
               </label>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" id="set-speak-mode-count" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
-                <span>Max words</span>
+                <span>Word count</span>
               </label>
               <label class="field-row field-row-unit">
+                <span class="unit-prefix">Min</span>
+                <input type="number" id="set-speak-min-count" min="10" max="2000" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+                <span class="unit">words</span>
+              </label>
+              <label class="field-row field-row-unit">
+                <span class="unit-prefix">Max</span>
                 <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
                 <span class="unit">words</span>
               </label>
@@ -1198,7 +1215,7 @@ export function bootEnglish(root) {
     })
     document.querySelector('#set-page-chars')?.addEventListener('change', (e) => {
       applySettingsPatch({
-        charsPerPage: Math.max(20, Math.min(400, Number(e.target.value) || 120)),
+        charsPerPage: Math.max(5, Math.min(500, Number(e.target.value) || 80)),
       })
     })
     document.querySelector('#set-cover')?.addEventListener('change', (e) => {
@@ -1219,8 +1236,14 @@ export function bootEnglish(root) {
     document.querySelector('#set-speak-minutes')?.addEventListener('change', (e) => {
       applySettingsPatch({ speakMaxMinutes: Number(e.target.value) || 5 })
     })
+    document.querySelector('#set-speak-min-minutes')?.addEventListener('change', (e) => {
+      applySettingsPatch({ speakMinMinutes: Number(e.target.value) || 1 })
+    })
     document.querySelector('#set-speak-count')?.addEventListener('change', (e) => {
       applySettingsPatch({ speakMaxCount: Number(e.target.value) || 150 })
+    })
+    document.querySelector('#set-speak-min-count')?.addEventListener('change', (e) => {
+      applySettingsPatch({ speakMinCount: Number(e.target.value) || 40 })
     })
     document.querySelector('#set-auto-advance')?.addEventListener('change', (e) => {
       applySettingsPatch({ autoAdvancePerfect: e.target.checked })

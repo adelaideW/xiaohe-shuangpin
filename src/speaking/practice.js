@@ -596,16 +596,22 @@ export function bootSpeaking(root, opts) {
             <h3>${t('Lesson length', 'レッスン長さ', '课文长度')}</h3>
             <p class="drawer-lead">${
               t(
-                'Use either time or word count — only one applies.',
-                '時間か文字数のどちらか一方だけ使います。',
-                '时间与字数二选一，同时只生效一种。',
+                'Use either time or word/character count — only one applies. Set a min and max.',
+                '時間か文字数のどちらか一方。最小と最大を設定します。',
+                '时间与字数二选一，可设置最少和最多。',
               )
             }</p>
             <label class="opt-row">
               <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
-              <span>${t('Max minutes', '最大分数', '最长分钟')}</span>
+              <span>${t('Time limit', '時間', '时间')}</span>
             </label>
             <label class="field-row field-row-unit">
+              <span class="unit-prefix">${t('Min', '最小', '最少')}</span>
+              <input type="number" id="set-speak-min-minutes" min="1" max="30" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <span class="unit">${t('min', '分', '分钟')}</span>
+            </label>
+            <label class="field-row field-row-unit">
+              <span class="unit-prefix">${t('Max', '最大', '最多')}</span>
               <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
               <span class="unit">${t('min', '分', '分钟')}</span>
             </label>
@@ -613,11 +619,17 @@ export function bootSpeaking(root, opts) {
               <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
               <span>${
                 language === 'en'
-                  ? 'Max words'
-                  : t('Max characters', '最大文字数', '最多字数')
+                  ? 'Word count'
+                  : t('Character count', '文字数', '字数')
               }</span>
             </label>
             <label class="field-row field-row-unit">
+              <span class="unit-prefix">${t('Min', '最小', '最少')}</span>
+              <input type="number" id="set-speak-min-count" min="10" max="2000" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
+            </label>
+            <label class="field-row field-row-unit">
+              <span class="unit-prefix">${t('Max', '最大', '最多')}</span>
               <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
               <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
             </label>
@@ -685,8 +697,14 @@ export function bootSpeaking(root, opts) {
     root.querySelector('#set-speak-minutes')?.addEventListener('change', (e) => {
       applySpeakLimitPatch({ speakMaxMinutes: Number(e.target.value) || 5 })
     })
+    root.querySelector('#set-speak-min-minutes')?.addEventListener('change', (e) => {
+      applySpeakLimitPatch({ speakMinMinutes: Number(e.target.value) || 1 })
+    })
     root.querySelector('#set-speak-count')?.addEventListener('change', (e) => {
       applySpeakLimitPatch({ speakMaxCount: Number(e.target.value) || (language === 'en' ? 150 : 200) })
+    })
+    root.querySelector('#set-speak-min-count')?.addEventListener('change', (e) => {
+      applySpeakLimitPatch({ speakMinCount: Number(e.target.value) || (language === 'en' ? 40 : 60) })
     })
     root.querySelector('#spk-line')?.addEventListener('click', () => {
       speakText(currentSentence(), language, state.rate)

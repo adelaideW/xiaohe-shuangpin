@@ -295,14 +295,24 @@ body::before {
 }
 
 .timer-bar {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0.65rem auto 0;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+
+.timer-bar-inner {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
-  max-width: 1100px;
-  width: calc(100% - 3rem);
-  margin: 0.65rem auto 0;
+  width: 100%;
   padding: 0.75rem 1rem;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1184,6 +1194,12 @@ body::before {
 
 .field-row-unit input[type='number']:disabled {
   opacity: 0.5;
+}
+
+.field-row-unit .unit-prefix {
+  min-width: 2.4rem;
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .field-row-unit .unit {
