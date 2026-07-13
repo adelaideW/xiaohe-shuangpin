@@ -25,22 +25,22 @@ export function segmentsFromAozoraText(raw) {
       const reading = m[2].replace(/[ァ-ヶ]/g, (ch) =>
         String.fromCharCode(ch.charCodeAt(0) - 0x60),
       )
-      segments.push({ surface: m[1], kana: reading })
+      segments.push({ surface: m[1], kana: reading, kanaFromSource: true })
     } else if (m[3]) {
-      segments.push({ surface: m[3], kana: m[3] })
+      segments.push({ surface: m[3], kana: m[3], kanaFromSource: false })
     } else if (m[4]) {
       const hira = m[4].replace(/[ァ-ヶ]/g, (ch) =>
         String.fromCharCode(ch.charCodeAt(0) - 0x60),
       )
-      segments.push({ surface: m[4], kana: hira })
+      segments.push({ surface: m[4], kana: hira, kanaFromSource: false })
     } else if (m[5]) {
-      // Kanji without reading — display only in typing
-      segments.push({ surface: m[5], kana: null })
+      // Kanji without reading — typing fills reading later; no source furigana
+      segments.push({ surface: m[5], kana: null, kanaFromSource: false })
     } else if (m[6]) {
-      if (m[6].includes('\n')) segments.push({ surface: '\n', kana: null })
-      else segments.push({ surface: ' ', kana: null })
+      if (m[6].includes('\n')) segments.push({ surface: '\n', kana: null, kanaFromSource: false })
+      else segments.push({ surface: ' ', kana: null, kanaFromSource: false })
     } else if (m[7]) {
-      segments.push({ surface: m[7], kana: null })
+      segments.push({ surface: m[7], kana: null, kanaFromSource: false })
     }
   }
   return segments

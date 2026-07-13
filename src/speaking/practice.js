@@ -358,12 +358,16 @@ export function bootSpeaking(root, opts) {
     if (furiganaCache.has(s)) return furiganaCache.get(s) || escapeHtml(s)
     try {
       const html = await toFuriganaHtml(s)
-      // Prefer ruby markup; fall back to escaped plain text
-      const out =
-        html && /<ruby[\s>]/i.test(html) ? html : html && html !== s ? html : escapeHtml(s)
+      let out = escapeHtml(s)
+      if (html && /<ruby[\s>]/i.test(html)) out = html
+      else if (html && /[\[(（]/.test(html) && !html.includes('<')) {
+        // Unexpected raw okurigana string
+        out = escapeHtml(s)
+      }
       furiganaCache.set(s, out)
       return out
-    } catch {
+    } catch (err) {
+      console.warn('Speaking furigana failed', err)
       return escapeHtml(s)
     }
   }
@@ -389,17 +393,21 @@ export function bootSpeaking(root, opts) {
 
   function feedbackHtml() {
     const fb = state.results[state.index]
-    if (!fb) return ''
+    if (!fb) {
+      return `<div class="spk-feedback-slot" aria-hidden="true"></div>`
+    }
     return `
-      <div class="spk-feedback">
-        <div class="spk-rating" aria-label="${fb.rating}/5">${ratingDots(fb.rating)} <span>${fb.rating}/5</span></div>
-        <p class="spk-summary">${escapeHtml(fb.summary)}</p>
-        <p class="spk-section-label">${t('What to improve', '改善ポイント', '改进建议')}</p>
-        <ul class="spk-improve">${(fb.improvements || []).map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
-        <details class="spk-heard">
-          <summary>${t('What we heard', '認識された内容', '识别结果')}</summary>
-          <p>${escapeHtml(fb.transcript || '')}</p>
-        </details>
+      <div class="spk-feedback-slot">
+        <div class="spk-feedback">
+          <div class="spk-rating" aria-label="${fb.rating}/5">${ratingDots(fb.rating)} <span>${fb.rating}/5</span></div>
+          <p class="spk-summary">${escapeHtml(fb.summary)}</p>
+          <p class="spk-section-label">${t('What to improve', '改善ポイント', '改进建议')}</p>
+          <ul class="spk-improve">${(fb.improvements || []).map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+          <details class="spk-heard">
+            <summary>${t('What we heard', '認識された内容', '识别结果')}</summary>
+            <p>${escapeHtml(fb.transcript || '')}</p>
+          </details>
+        </div>
       </div>
     `
   }
@@ -673,15 +681,17 @@ export function bootSpeaking(root, opts) {
     const side = root.querySelector('.spk-side')
     const pane = root.querySelector('.spk-article-pane')
     if (!side || !pane) return
-    // Desktop: article pane hugs the right column (controls + feedback)
     if (window.matchMedia('(max-width: 900px)').matches) {
       pane.style.height = ''
       pane.style.maxHeight = ''
+      side.style.height = ''
       return
     }
-    const h = Math.max(side.offsetHeight, 360)
-    pane.style.height = `${h}px`
-    pane.style.maxHeight = `${h}px`
+    // Fixed paired height ≈ controls + reserved feedback so the card does not jump
+    const FIXED = 560
+    pane.style.height = `${FIXED}px`
+    pane.style.maxHeight = `${FIXED}px`
+    side.style.height = `${FIXED}px`
   }
 
   function scrollActiveSentenceIntoView() {
@@ -813,6 +823,16 @@ export function bootSpeaking(root, opts) {
   window.addEventListener('resize', () => {
     syncArticlePaneHeight()
   })
+
+  // Warm morphological dictionary so speaking furigana is ready
+  if (language === 'ja') {
+    void import('./furigana.js')
+      .then((m) => m.getKuroshiro())
+      .then(() => {
+        if (settings.speakShowHiragana) void render()
+      })
+      .catch((err) => console.warn('Kuromoji warmup failed', err))
+  }
 
   render()
 }

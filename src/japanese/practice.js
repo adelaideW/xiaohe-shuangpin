@@ -108,8 +108,10 @@ function hintHiragana(kana) {
 }
 
 /**
- * Surface for passage display — optional ruby (furigana) over kanji.
- * @param {{ surface: string, kana: string | null }} seg
+ * Surface for passage display — ruby when a reading exists from the source
+ * (Aozora annotation or curated bank). Auto-generated readings stay typeable
+ * but are not shown as furigana over the article.
+ * @param {{ surface: string, kana: string | null, kanaFromSource?: boolean }} seg
  * @param {boolean} showFurigana
  */
 function segmentSurfaceHtml(seg, showFurigana) {
@@ -118,6 +120,8 @@ function segmentSurfaceHtml(seg, showFurigana) {
   if (surface === '\n') return '<br />'
   const escaped = escapeHtml(surface)
   if (!showFurigana || !seg.kana) return escaped
+  // Explicitly auto-filled readings: typeable, no ruby
+  if (seg.kanaFromSource === false) return escaped
   if (!/[\u4E00-\u9FFF々〆ヵヶ]/.test(surface)) return escaped
   const reading = escapeHtml(hintHiragana(seg.kana))
   if (!reading || reading === escaped) return escaped
@@ -461,16 +465,12 @@ export function bootJapanese(root) {
   async function loadPassageAt(passage, opts = {}) {
     const token = ++loadPassageToken
     applyPassage(passage)
-    const needsEnrich =
-      !passage?._readingsEnriched &&
-      (passage?.segments || []).some(
-        (s) => !s.kana && /[\u4E00-\u9FFF々〆ヵヶ]/.test(s.surface || ''),
-      )
+    const needsEnrich = (passage?.segments || []).some(
+      (s) => !s.kana && /[\u4E00-\u9FFF々〆ヵヶ]/.test(s.surface || ''),
+    )
     if (!needsEnrich) {
       state.readingsBusy = false
-      const marked = passage?._readingsEnriched
-        ? passage
-        : { ...passage, _readingsEnriched: true }
+      const marked = { ...passage, _readingsEnriched: true }
       state.passage = marked
       if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
         state.passageHistory[state.historyIndex] = marked

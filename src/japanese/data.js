@@ -209,6 +209,9 @@ export function buildJapaneseUnits(passage) {
         spanEnd,
         kind: 'kana',
       })
+    } else if (/[\u4E00-\u9FFF々〆ヵヶ]/.test(surface)) {
+      // Kanji without reading yet — still typeable after enrichment; skip if still null
+      // (enrichment fills kana). If left null, treat surface as skip-display only.
     } else {
       const key = punctTypingKey(surface)
       if (key) {
@@ -324,7 +327,7 @@ export function pageIndexForUnit(pages, unitIndex) {
 
 /**
  * Build a passage from plain text by treating each char as its own segment.
- * Hiragana/katakana keep themselves as reading; others skipped for typing.
+ * Hiragana/katakana keep themselves as reading; kanji filled later for typing.
  * @param {string} title
  * @param {string} text
  * @returns {JpPassage}
@@ -335,17 +338,17 @@ export function passageFromJapaneseText(title, text) {
   const segments = []
   for (const ch of cleaned) {
     if (/[\u3040-\u309F]/.test(ch)) {
-      segments.push({ surface: ch, kana: ch })
+      segments.push({ surface: ch, kana: ch, kanaFromSource: false })
     } else if (/[\u30A0-\u30FF]/.test(ch)) {
-      // katakana surface, convert later to hiragana in practice via wanakana
-      segments.push({ surface: ch, kana: ch })
+      segments.push({ surface: ch, kana: ch, kanaFromSource: false })
     } else if (/[\u4E00-\u9FFF]/.test(ch)) {
-      // Kanji without reading — skip typing, display only
-      segments.push({ surface: ch, kana: null })
+      segments.push({ surface: ch, kana: null, kanaFromSource: false })
     } else {
-      segments.push({ surface: ch, kana: null })
+      segments.push({ surface: ch, kana: null, kanaFromSource: false })
     }
   }
-  if (!segments.some((s) => s.kana)) throw new Error('ひらがな / カタカナが見つかりません')
+  if (!segments.some((s) => s.kana || /[\u4E00-\u9FFF]/.test(s.surface || ''))) {
+    throw new Error('ひらがな / カタカナ / 漢字が見つかりません')
+  }
   return { title: title || 'アップロード', segments }
 }
