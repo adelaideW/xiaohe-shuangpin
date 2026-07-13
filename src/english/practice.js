@@ -472,6 +472,8 @@ export function bootEnglish(root) {
         'speakMaxCount' in patch
       ) {
         render()
+      } else if ('timerMode' in patch) {
+        renderTimerControls()
       }
       return
     }
@@ -699,7 +701,6 @@ export function bootEnglish(root) {
 
     return `
       <div class="keyboard-wrap">
-        <button type="button" class="ghost-chip" id="kb-toggle">${settings.keyboardCovered ? 'Show keyboard' : 'Hide keyboard'}</button>
         <div class="keyboard ${settings.keyboardCovered ? 'covered' : ''}">${rows}</div>
       </div>
     `
@@ -1068,6 +1069,7 @@ export function bootEnglish(root) {
           <button type="button" id="btn-skip">Skip</button>
           <button type="button" id="btn-speak">Read aloud</button>
           <button type="button" id="btn-reset">Reset stats</button>
+          <button type="button" id="kb-toggle">${settings.keyboardCovered ? 'Show keyboard' : 'Hide keyboard'}</button>
         </div>
         ${renderKeyboard()}
       </main>

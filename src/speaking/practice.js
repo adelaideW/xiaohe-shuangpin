@@ -18,8 +18,8 @@ import { loadEnglishSettings, saveEnglishSettings } from '../english/settings.js
 import { loadJapaneseSettings, saveJapaneseSettings } from '../japanese/settings.js'
 import { loadSettings, saveSettings } from '../settings.js'
 
-const ICON_RECORD = `<svg class="spk-mic-icon" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="currentColor"/></svg>`
-const ICON_STOP = `<svg class="spk-mic-icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor"/></svg>`
+const ICON_RECORD = `<svg class="spk-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11.25a6.5 6.5 0 0 0 13 0"/><path d="M12 17.75V21"/><path d="M9.25 21h5.5"/></svg>`
+const ICON_STOP = `<svg class="spk-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.75" fill="currentColor"/></svg>`
 
 function escapeHtml(s) {
   return String(s)

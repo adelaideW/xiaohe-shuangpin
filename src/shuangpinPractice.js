@@ -312,8 +312,10 @@ function timerRightHtml() {
       <button type="button" class="icon-btn" id="btn-reset-timer" title="重置" aria-label="重置">${iconReset}</button>
       <button type="button" class="icon-btn icon-btn-danger" id="btn-end-timer" title="结束" aria-label="结束">${iconEnd}</button>
     `
-  } else {
+  } else if (settings.timerMode === 'manual') {
     actions = `<button type="button" class="primary" id="btn-start-timer">开始计时</button>`
+  } else {
+    actions = `<span class="timer-hint">输入即开始计时</span>`
   }
 
   return `${status}<div class="timer-actions">${actions}</div>`
@@ -503,11 +505,20 @@ function softApplySettingsVisuals(patch) {
       tmp.innerHTML = renderKeyboard()
       const next = tmp.firstElementChild
       wrap.replaceWith(next)
-      next.querySelector('#kb-toggle')?.addEventListener('click', () => {
-        applySettingsPatch({ keyboardCovered: !settings.keyboardCovered })
-      })
+    }
+    const kbToggle = document.querySelector('#kb-toggle')
+    if (kbToggle && patch.keyboardCovered != null) {
+      kbToggle.textContent = settings.keyboardCovered ? '显示键盘' : '遮盖键盘'
+    }
+    const hintsBtn = document.querySelector('#btn-hints')
+    if (hintsBtn && patch.showHints != null) {
+      hintsBtn.textContent = settings.showHints ? '隐藏键位提示' : '显示键位提示'
     }
     patchLive()
+  }
+
+  if (patch.timerMode != null && !state.sessionActive && !state.sessionFinished) {
+    renderTimerControls()
   }
 }
 
@@ -1162,9 +1173,6 @@ function renderKeyboard() {
 
   return `
     <div class="keyboard-wrap">
-      <button type="button" class="keyboard-toggle" id="kb-toggle">
-        ${settings.keyboardCovered ? '键盘已遮盖 · 点此恢复' : '点此遮盖键盘'}
-      </button>
       <div class="legend">
         <span class="init">声母</span>
         <span class="final">韵母</span>
@@ -1357,6 +1365,7 @@ function render() {
         <button type="button" id="btn-speak">朗读</button>
         <button type="button" id="btn-reset">重置统计</button>
         <button type="button" id="btn-hints">${settings.showHints ? '隐藏键位提示' : '显示键位提示'}</button>
+        <button type="button" id="kb-toggle">${settings.keyboardCovered ? '显示键盘' : '遮盖键盘'}</button>
       </div>
       ${renderKeyboard()}
     </main>

@@ -438,6 +438,8 @@ export function bootJapanese(root) {
         'speakMaxCount' in patch
       ) {
         render()
+      } else if ('timerMode' in patch) {
+        renderTimerControls()
       }
       return
     }
@@ -927,7 +929,6 @@ export function bootJapanese(root) {
       .join('')
     return `
       <div class="keyboard-wrap">
-        <button type="button" class="ghost-chip" id="kb-toggle">${settings.keyboardCovered ? 'キーボード表示' : 'キーボード非表示'}</button>
         <div class="keyboard keyboard-jp ${settings.keyboardCovered ? 'covered' : ''}">${html}</div>
       </div>`
   }
@@ -972,6 +973,7 @@ export function bootJapanese(root) {
           <button type="button" id="btn-skip">スキップ</button>
           <button type="button" id="btn-speak">読み上げ</button>
           <button type="button" id="btn-reset">統計リセット</button>
+          <button type="button" id="kb-toggle">${settings.keyboardCovered ? 'キーボード表示' : 'キーボード非表示'}</button>
         </div>
         ${renderKeyboard()}
       </main>
