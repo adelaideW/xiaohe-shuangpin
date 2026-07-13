@@ -59,8 +59,13 @@ const state = {
   sessionEndsAt: null,
   sessionActive: false,
   sessionFinished: false,
+  sessionPaused: false,
   remainingMs: 0,
+  lastActivityAt: 0,
+  pauseStartedAt: null,
+  pausedAccumMs: 0,
   autoAdvanceNote: '',
+  autoPaused: false, // paused due to inactivity
   // navigation
   passageHistory: [],
   historyIndex: -1,
@@ -102,12 +107,15 @@ function formatTime(ms) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+const IDLE_PAUSE_MS = 60_000
+
 function elapsedMinutes() {
   if (!state.startedAt) return 0
-  const end = state.sessionFinished
-    ? state.sessionEndsAt || performance.now()
-    : performance.now()
-  return Math.max((end - state.startedAt) / 60000, 1 / 60)
+  let elapsed = performance.now() - state.startedAt - state.pausedAccumMs
+  if (state.sessionPaused && state.pauseStartedAt) {
+    elapsed -= performance.now() - state.pauseStartedAt
+  }
+  return Math.max(elapsed / 60000, 1 / 60)
 }
 
 function accuracy() {
@@ -129,6 +137,185 @@ function clearAdvanceTimer() {
     clearTimeout(advanceTimer)
     advanceTimer = null
   }
+}
+
+function noteActivity() {
+  state.lastActivityAt = performance.now()
+  // Typing resumes an idle auto-pause
+  if (state.sessionActive && state.sessionPaused && state.autoPaused && !state.sessionFinished) {
+    resumeSession()
+  }
+}
+
+function syncEndsAtFromRemaining() {
+  state.sessionEndsAt = performance.now() + state.remainingMs
+}
+
+function startSession() {
+  if (state.sessionFinished) return
+  if (state.sessionActive && !state.sessionPaused) return
+  if (state.sessionActive && state.sessionPaused) {
+    resumeSession()
+    return
+  }
+  state.sessionActive = true
+  state.sessionFinished = false
+  state.sessionPaused = false
+  state.autoPaused = false
+  state.startedAt = performance.now()
+  state.pausedAccumMs = 0
+  state.pauseStartedAt = null
+  state.remainingMs = state.durationMinutes * 60 * 1000
+  syncEndsAtFromRemaining()
+  state.lastActivityAt = performance.now()
+  updateTimerDisplay()
+}
+
+function pauseSession({ auto = false } = {}) {
+  if (!state.sessionActive || state.sessionFinished || state.sessionPaused) return
+  state.remainingMs = Math.max(0, state.sessionEndsAt - performance.now())
+  state.sessionPaused = true
+  state.autoPaused = auto
+  state.pauseStartedAt = performance.now()
+  renderTimerControls()
+}
+
+function resumeSession() {
+  if (!state.sessionActive || state.sessionFinished || !state.sessionPaused) return
+  if (state.pauseStartedAt) {
+    state.pausedAccumMs += performance.now() - state.pauseStartedAt
+  }
+  state.pauseStartedAt = null
+  state.sessionPaused = false
+  state.autoPaused = false
+  syncEndsAtFromRemaining()
+  state.lastActivityAt = performance.now()
+  renderTimerControls()
+}
+
+function resetTimerCountdown() {
+  if (state.sessionFinished) return
+  state.remainingMs = state.durationMinutes * 60 * 1000
+  if (state.sessionActive && !state.sessionPaused) {
+    syncEndsAtFromRemaining()
+  }
+  state.lastActivityAt = performance.now()
+  if (state.sessionPaused) {
+    renderTimerControls()
+    return
+  }
+  const el = document.querySelector('#timer-value')
+  if (el) {
+    el.textContent = formatTime(state.remainingMs)
+    el.classList.toggle('urgent', state.remainingMs < 30000)
+    el.classList.remove('paused')
+  }
+}
+
+function endSession() {
+  if (state.sessionFinished) return
+  state.sessionActive = false
+  state.sessionFinished = true
+  state.sessionPaused = false
+  state.autoPaused = false
+  state.pauseStartedAt = null
+  state.remainingMs = 0
+  state.completed = true
+  clearAdvanceTimer()
+  render()
+}
+
+function updateTimerDisplay() {
+  if (!state.sessionActive || state.sessionFinished) return
+
+  // Auto-pause after 1 minute without typing
+  if (
+    !state.sessionPaused &&
+    state.lastActivityAt &&
+    performance.now() - state.lastActivityAt >= IDLE_PAUSE_MS
+  ) {
+    pauseSession({ auto: true })
+    return
+  }
+
+  if (state.sessionPaused) return
+
+  const left = state.sessionEndsAt - performance.now()
+  state.remainingMs = left
+  if (left <= 0) {
+    endSession()
+    return
+  }
+  const el = document.querySelector('#timer-value')
+  if (el) {
+    el.textContent = formatTime(left)
+    el.classList.toggle('urgent', left < 30000)
+    el.classList.remove('paused')
+  }
+}
+
+/** Soft-update timer buttons without full page rebuild when possible */
+function renderTimerControls() {
+  const bar = document.querySelector('.timer-bar')
+  if (!bar) {
+    render()
+    return
+  }
+  const right = bar.querySelector('.timer-right')
+  if (!right) {
+    render()
+    return
+  }
+  right.innerHTML = timerRightHtml()
+  bindTimerButtons()
+}
+
+function timerRightHtml() {
+  let status
+  if (state.sessionFinished) {
+    status = `<span class="timer-value done">结束</span>`
+  } else if (state.sessionActive && state.sessionPaused) {
+    status = `<span class="timer-value paused" id="timer-value">${formatTime(state.remainingMs)}${state.autoPaused ? ' · 闲置' : ' · 暂停'}</span>`
+  } else if (state.sessionActive) {
+    status = `<span class="timer-value ${state.remainingMs < 30000 ? 'urgent' : ''}" id="timer-value">${formatTime(state.remainingMs)}</span>`
+  } else {
+    status = `<span class="timer-value idle" id="timer-value">${formatTime(state.durationMinutes * 60 * 1000)}</span>`
+  }
+
+  let actions = ''
+  if (state.sessionFinished) {
+    actions = `<button type="button" class="primary" id="btn-restart-timer">再练一轮</button>`
+  } else if (state.sessionActive) {
+    actions = `
+      <button type="button" id="btn-pause-timer">${state.sessionPaused ? '继续' : '暂停'}</button>
+      <button type="button" id="btn-reset-timer">重置</button>
+      <button type="button" id="btn-end-timer">结束</button>
+    `
+  } else {
+    actions = `<button type="button" class="primary" id="btn-start-timer">开始计时</button>`
+  }
+
+  return `${status}${actions}`
+}
+
+function bindTimerButtons() {
+  document.querySelector('#btn-start-timer')?.addEventListener('click', () => {
+    startSession()
+    render()
+    focusApp()
+  })
+  document.querySelector('#btn-end-timer')?.addEventListener('click', () => endSession())
+  document.querySelector('#btn-pause-timer')?.addEventListener('click', () => {
+    if (state.sessionPaused) resumeSession()
+    else pauseSession({ auto: false })
+  })
+  document.querySelector('#btn-reset-timer')?.addEventListener('click', () => {
+    resetTimerCountdown()
+    focusApp()
+  })
+  document.querySelectorAll('#btn-restart-timer').forEach((btn) => {
+    btn.addEventListener('click', restartRound)
+  })
 }
 
 function nextCharacter() {
@@ -209,44 +396,14 @@ function resetSessionStats() {
   state.autoAdvanceNote = ''
   state.sessionActive = false
   state.sessionFinished = false
+  state.sessionPaused = false
+  state.autoPaused = false
+  state.pauseStartedAt = null
+  state.pausedAccumMs = 0
+  state.lastActivityAt = 0
   state.sessionEndsAt = null
   state.remainingMs = state.durationMinutes * 60 * 1000
   clearAdvanceTimer()
-}
-
-function startSession() {
-  if (state.sessionActive || state.sessionFinished) return
-  state.sessionActive = true
-  state.sessionFinished = false
-  state.startedAt = performance.now()
-  state.sessionEndsAt = state.startedAt + state.durationMinutes * 60 * 1000
-  state.remainingMs = state.durationMinutes * 60 * 1000
-  updateTimerDisplay()
-}
-
-function endSession() {
-  if (state.sessionFinished) return
-  state.sessionActive = false
-  state.sessionFinished = true
-  state.remainingMs = 0
-  state.completed = true
-  clearAdvanceTimer()
-  render()
-}
-
-function updateTimerDisplay() {
-  if (!state.sessionActive || state.sessionFinished) return
-  const left = state.sessionEndsAt - performance.now()
-  state.remainingMs = left
-  if (left <= 0) {
-    endSession()
-    return
-  }
-  const el = document.querySelector('#timer-value')
-  if (el) {
-    el.textContent = formatTime(left)
-    el.classList.toggle('urgent', left < 30000)
-  }
 }
 
 function setMode(mode) {
@@ -328,20 +485,16 @@ function applySettingsPatch(patch) {
 }
 
 function ensureSession() {
-  if (state.sessionActive || state.sessionFinished) return true
+  if (state.sessionFinished) return true
+  if (state.sessionActive) {
+    // Keep idle auto-pause until user types (noteActivity resumes)
+    return true
+  }
   if (settings.timerMode === 'manual') {
-    // Require explicit start — allow typing but don't start clock
     return true
   }
   startSession()
-  const right = document.querySelector('.timer-right')
-  if (right) {
-    right.innerHTML = `
-      <span class="timer-value" id="timer-value">${formatTime(state.remainingMs)}</span>
-      <button type="button" id="btn-end-timer">结束</button>
-    `
-    document.querySelector('#btn-end-timer')?.addEventListener('click', () => endSession())
-  }
+  renderTimerControls()
   document.querySelectorAll('[data-duration], #custom-duration').forEach((el) => {
     el.disabled = true
   })
@@ -541,13 +694,7 @@ function handleKey(key) {
   const lower = key.toLowerCase()
   if (!/^[a-z;]$/.test(lower)) return
 
-  // In manual mode without session, still count practice but CPM uses startedAt only when active
-  if (settings.timerMode === 'auto') {
-    // ensureSession already started
-  } else if (!state.sessionActive && !state.startedAt) {
-    // Track informal start for CPM only after Start — leave startedAt null until Start
-  }
-
+  noteActivity()
   state.keystrokes += 1
   const nextBuf = state.buffer + lower
   const expected = code.slice(0, nextBuf.length)
@@ -736,15 +883,6 @@ function renderTimerBar() {
       `<button type="button" class="dur-btn ${state.durationMinutes === m && !state.sessionActive ? 'active' : ''}" data-duration="${m}" ${state.sessionActive ? 'disabled' : ''}>${m} 分</button>`,
   ).join('')
 
-  let status
-  if (state.sessionFinished) {
-    status = `<span class="timer-value done">结束</span>`
-  } else if (state.sessionActive) {
-    status = `<span class="timer-value ${state.remainingMs < 30000 ? 'urgent' : ''}" id="timer-value">${formatTime(state.remainingMs)}</span>`
-  } else {
-    status = `<span class="timer-value idle" id="timer-value">${formatTime(state.durationMinutes * 60 * 1000)}</span>`
-  }
-
   return `
     <div class="timer-bar">
       <div class="timer-left">
@@ -756,14 +894,7 @@ function renderTimerBar() {
         </label>
       </div>
       <div class="timer-right">
-        ${status}
-        ${
-          state.sessionFinished
-            ? `<button type="button" class="primary" id="btn-restart-timer">再练一轮</button>`
-            : state.sessionActive
-              ? `<button type="button" id="btn-end-timer">结束</button>`
-              : `<button type="button" class="primary" id="btn-start-timer">开始计时</button>`
-        }
+        ${timerRightHtml()}
       </div>
     </div>
   `
@@ -1023,17 +1154,7 @@ function bindEvents() {
     setDuration(e.target.value)
   })
 
-  document.querySelector('#btn-start-timer')?.addEventListener('click', () => {
-    startSession()
-    render()
-    focusApp()
-  })
-
-  document.querySelector('#btn-end-timer')?.addEventListener('click', () => endSession())
-
-  document.querySelectorAll('#btn-restart-timer').forEach((btn) => {
-    btn.addEventListener('click', restartRound)
-  })
+  bindTimerButtons()
 
   document.querySelector('#kb-toggle')?.addEventListener('click', () => {
     applySettingsPatch({ keyboardCovered: !settings.keyboardCovered })

@@ -154,6 +154,11 @@ body::before {
 }
 
 .timer-left,
+.timer-value.paused {
+  color: var(--gold);
+  font-size: 1.15rem;
+}
+
 .timer-right {
   display: flex;
   flex-wrap: wrap;
