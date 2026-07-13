@@ -5,12 +5,15 @@ import { CHARACTERS, SENTENCES, ARTICLES, buildUnits } from './data.js'
 const STORAGE_MODE = 'xiaohe-practice-mode'
 const STORAGE_KB = 'xiaohe-keyboard-covered'
 const STORAGE_BEST = 'xiaohe-best-combo'
+const STORAGE_DURATION = 'xiaohe-practice-duration'
 
 const MODES = [
   { id: 'character', label: '单字练习' },
   { id: 'sentence', label: '句子练习' },
   { id: 'article', label: '文章练习' },
 ]
+
+const DURATION_PRESETS = [1, 3, 5, 10]
 
 function loadMode() {
   const saved = localStorage.getItem(STORAGE_MODE)
@@ -22,9 +25,17 @@ function saveMode(mode) {
   localStorage.setItem(STORAGE_MODE, mode)
 }
 
+function loadDuration() {
+  const n = Number(localStorage.getItem(STORAGE_DURATION))
+  return Number.isFinite(n) && n > 0 ? n : 5
+}
+
+function saveDuration(mins) {
+  localStorage.setItem(STORAGE_DURATION, String(mins))
+}
+
 const state = {
   mode: loadMode(),
-  typed: '',
   buffer: '',
   correct: 0,
   wrong: 0,
@@ -34,16 +45,25 @@ const state = {
   keystrokes: 0,
   keyboardCovered: localStorage.getItem(STORAGE_KB) === '1',
   showHints: true,
-  // character mode
   currentChar: null,
-  // passage modes
   passage: null,
   units: [],
   unitIndex: 0,
   completed: false,
+  passageWrong: 0,
+  passagesDone: 0,
+  // timer
+  durationMinutes: loadDuration(),
+  sessionEndsAt: null,
+  sessionActive: false,
+  sessionFinished: false,
+  remainingMs: 0,
+  autoAdvanceNote: '',
 }
 
 const app = document.querySelector('#app')
+let tickHandle = null
+let advanceTimer = null
 
 function shufflePick(list, avoid) {
   if (list.length === 1) return list[0]
@@ -55,9 +75,7 @@ function shufflePick(list, avoid) {
 }
 
 function currentTarget() {
-  if (state.mode === 'character') {
-    return state.currentChar
-  }
+  if (state.mode === 'character') return state.currentChar
   return state.units[state.unitIndex] || null
 }
 
@@ -66,13 +84,19 @@ function currentCode() {
   return t ? toXiaohe(t.pinyin) : ''
 }
 
-function ensureTimer() {
-  if (!state.startedAt) state.startedAt = performance.now()
+function formatTime(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
 }
 
 function elapsedMinutes() {
   if (!state.startedAt) return 0
-  return Math.max((performance.now() - state.startedAt) / 60000, 1 / 60)
+  const end = state.sessionFinished
+    ? (state.sessionEndsAt || performance.now())
+    : performance.now()
+  return Math.max((end - state.startedAt) / 60000, 1 / 60)
 }
 
 function accuracy() {
@@ -89,10 +113,18 @@ function kpm() {
   return Math.round(state.keystrokes / elapsedMinutes())
 }
 
+function clearAdvanceTimer() {
+  if (advanceTimer) {
+    clearTimeout(advanceTimer)
+    advanceTimer = null
+  }
+}
+
 function nextCharacter() {
   state.currentChar = shufflePick(CHARACTERS, state.currentChar)
   state.buffer = ''
   state.completed = false
+  state.autoAdvanceNote = ''
 }
 
 function startPassage(mode) {
@@ -102,6 +134,8 @@ function startPassage(mode) {
   state.unitIndex = 0
   state.buffer = ''
   state.completed = false
+  state.passageWrong = 0
+  state.autoAdvanceNote = ''
 }
 
 function resetSessionStats() {
@@ -112,6 +146,49 @@ function resetSessionStats() {
   state.keystrokes = 0
   state.buffer = ''
   state.completed = false
+  state.passageWrong = 0
+  state.passagesDone = 0
+  state.autoAdvanceNote = ''
+  state.sessionActive = false
+  state.sessionFinished = false
+  state.sessionEndsAt = null
+  state.remainingMs = state.durationMinutes * 60 * 1000
+  clearAdvanceTimer()
+}
+
+function startSession() {
+  if (state.sessionActive || state.sessionFinished) return
+  state.sessionActive = true
+  state.sessionFinished = false
+  state.startedAt = performance.now()
+  state.sessionEndsAt = state.startedAt + state.durationMinutes * 60 * 1000
+  state.remainingMs = state.durationMinutes * 60 * 1000
+  updateTimerDisplay()
+}
+
+function endSession() {
+  if (state.sessionFinished) return
+  state.sessionActive = false
+  state.sessionFinished = true
+  state.remainingMs = 0
+  state.completed = true
+  clearAdvanceTimer()
+  render()
+}
+
+function updateTimerDisplay() {
+  if (!state.sessionActive || state.sessionFinished) return
+  const left = state.sessionEndsAt - performance.now()
+  state.remainingMs = left
+  if (left <= 0) {
+    endSession()
+    return
+  }
+  const el = document.querySelector('#timer-value')
+  if (el) {
+    el.textContent = formatTime(left)
+    el.classList.toggle('urgent', left < 30000)
+  }
 }
 
 function setMode(mode) {
@@ -122,6 +199,45 @@ function setMode(mode) {
   else startPassage(mode)
   render()
   focusApp()
+}
+
+function setDuration(mins) {
+  const n = Math.min(60, Math.max(1, Math.round(Number(mins) || 5)))
+  state.durationMinutes = n
+  saveDuration(n)
+  if (!state.sessionActive) {
+    state.remainingMs = n * 60 * 1000
+  }
+  render()
+  focusApp()
+}
+
+function ensureSession() {
+  if (!state.sessionActive && !state.sessionFinished) startSession()
+}
+
+function onPassageComplete() {
+  state.passagesDone += 1
+  const clean = state.passageWrong === 0
+  const timed = state.sessionActive && !state.sessionFinished
+
+  if (timed && clean) {
+    state.autoAdvanceNote = '全部正确 · 下一篇'
+    state.completed = true
+    render()
+    clearAdvanceTimer()
+    advanceTimer = setTimeout(() => {
+      if (!state.sessionActive || state.sessionFinished) return
+      startPassage(state.mode)
+      render()
+      focusApp()
+    }, 700)
+    return
+  }
+
+  state.completed = true
+  state.autoAdvanceNote = clean ? '' : '有错字 · 可继续下一篇'
+  render()
 }
 
 function onCorrectSyllable() {
@@ -141,6 +257,7 @@ function onCorrectSyllable() {
       el.classList.add('correct-flash')
     }
     setTimeout(() => {
+      if (state.sessionFinished) return
       nextCharacter()
       render()
     }, 180)
@@ -150,24 +267,27 @@ function onCorrectSyllable() {
 
   state.unitIndex += 1
   if (state.unitIndex >= state.units.length) {
-    state.completed = true
+    onPassageComplete()
+    return
   }
   render()
 }
 
 function onWrongKey() {
   state.wrong += 1
+  state.passageWrong += 1
   state.combo = 0
   state.buffer = ''
   render()
 }
 
 function handleKey(key) {
-  if (state.completed) return
+  if (state.sessionFinished) return
+  if (state.completed && state.mode !== 'character') return
   const target = currentTarget()
   if (!target) return
 
-  ensureTimer()
+  ensureSession()
   const code = currentCode()
   if (!code) return
 
@@ -184,11 +304,8 @@ function handleKey(key) {
   }
 
   state.buffer = nextBuf
-  if (state.buffer === code) {
-    onCorrectSyllable()
-  } else {
-    render()
-  }
+  if (state.buffer === code) onCorrectSyllable()
+  else render()
 }
 
 function speakCurrent() {
@@ -206,6 +323,45 @@ function focusApp() {
   if (mirror) mirror.focus({ preventScroll: true })
 }
 
+function renderTimerBar() {
+  const presets = DURATION_PRESETS.map(
+    (m) =>
+      `<button type="button" class="dur-btn ${state.durationMinutes === m && !state.sessionActive ? 'active' : ''}" data-duration="${m}" ${state.sessionActive ? 'disabled' : ''}>${m} 分</button>`,
+  ).join('')
+
+  let status
+  if (state.sessionFinished) {
+    status = `<span class="timer-value done">结束</span>`
+  } else if (state.sessionActive) {
+    status = `<span class="timer-value ${state.remainingMs < 30000 ? 'urgent' : ''}" id="timer-value">${formatTime(state.remainingMs)}</span>`
+  } else {
+    status = `<span class="timer-value idle" id="timer-value">${formatTime(state.durationMinutes * 60 * 1000)}</span>`
+  }
+
+  return `
+    <div class="timer-bar">
+      <div class="timer-left">
+        <span class="timer-label">练习时长</span>
+        <div class="dur-group">${presets}</div>
+        <label class="custom-dur">
+          <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} />
+          <span>分钟</span>
+        </label>
+      </div>
+      <div class="timer-right">
+        ${status}
+        ${
+          state.sessionFinished
+            ? `<button type="button" class="primary" id="btn-restart-timer">再练一轮</button>`
+            : state.sessionActive
+              ? `<button type="button" id="btn-end-timer">结束</button>`
+              : `<button type="button" class="primary" id="btn-start-timer">开始计时</button>`
+        }
+      </div>
+    </div>
+  `
+}
+
 function renderStats() {
   return `
     <div class="stats">
@@ -221,8 +377,8 @@ function renderStats() {
 
 function renderKeyboard() {
   const code = currentCode()
-  const initKey = state.showHints && code ? code[0] : ''
-  const finalKey = state.showHints && code ? code[1] : ''
+  const initKey = state.showHints && code && !state.sessionFinished ? code[0] : ''
+  const finalKey = state.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
 
   const rows = KEYBOARD_LAYOUT.map(
@@ -234,11 +390,6 @@ function renderKeyboard() {
           const classes = ['key']
           if (initKey && keyId === initKey && typedLen === 0) classes.push('hint-initial')
           if (finalKey && keyId === finalKey && typedLen === 1) classes.push('hint-final')
-          if (typedLen === 0 && initKey && keyId === initKey) {
-            /* awaiting initial */
-          } else if (typedLen >= 1 && initKey && keyId === initKey) {
-            /* already typed */
-          }
           return `
             <div class="${classes.join(' ')}" data-key="${keyId}">
               <span class="k-init">${initLabel}</span>
@@ -274,10 +425,9 @@ function renderCodeSlots() {
   return `
     <div class="code-progress" aria-hidden="true">
       ${[...code]
-        .map((ch, i) => {
+        .map((_, i) => {
           const filled = i < state.buffer.length
-          const err = false
-          return `<div class="code-slot ${filled ? 'filled' : ''} ${err ? 'error' : ''}">${filled ? state.buffer[i] : ''}</div>`
+          return `<div class="code-slot ${filled ? 'filled' : ''}">${filled ? state.buffer[i] : ''}</div>`
         })
         .join('')}
     </div>
@@ -285,6 +435,7 @@ function renderCodeSlots() {
 }
 
 function renderCharacterStage() {
+  if (state.sessionFinished) return renderSessionSummary()
   const t = state.currentChar
   if (!t) return ''
   const code = toXiaohe(t.pinyin)
@@ -297,16 +448,37 @@ function renderCharacterStage() {
   `
 }
 
+function renderSessionSummary() {
+  return `
+    <div class="complete-banner">
+      <h2>时间到</h2>
+      <p>
+        练了 ${state.correct} 字 · 准确率 ${accuracy()}% · ${cpm()} 字/分
+        ${state.mode !== 'character' ? ` · 完成 ${state.passagesDone} 篇` : ''}
+      </p>
+      <div class="toolbar">
+        <button type="button" class="primary" id="btn-restart-timer">再练一轮</button>
+      </div>
+    </div>
+  `
+}
+
 function renderPassageStage() {
   if (!state.passage) return ''
+  if (state.sessionFinished) return renderSessionSummary()
+
   if (state.completed) {
     return `
       <div class="complete-banner">
-        <h2>完成！</h2>
-        <p>准确率 ${accuracy()}% · ${cpm()} 字/分</p>
-        <div class="toolbar">
-          <button type="button" class="primary" id="btn-next-passage">再来一篇</button>
-        </div>
+        <h2>${state.passageWrong === 0 ? '全部正确！' : '本篇完成'}</h2>
+        <p>${state.autoAdvanceNote || `准确率 ${accuracy()}% · ${cpm()} 字/分`}</p>
+        ${
+          state.autoAdvanceNote.includes('下一篇')
+            ? `<p class="advance-hint">即将加载下一篇…</p>`
+            : `<div class="toolbar">
+                <button type="button" class="primary" id="btn-next-passage">下一篇</button>
+              </div>`
+        }
       </div>
     `
   }
@@ -331,9 +503,9 @@ function renderPassageStage() {
     <div class="char-stage" style="width:100%;align-items:stretch">
       <div class="passage-meta">
         <span class="title">${state.passage.title}</span>
-        <span>${state.unitIndex}/${state.units.length}</span>
+        <span>${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}</span>
       </div>
-      <div class="passage">${chars}</div>
+      <div class="passage poem">${chars}</div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;margin-top:1rem">
         <div class="pinyin-line">${currentUnit ? `${currentUnit.pinyin} · ${code}` : ''}</div>
         ${renderCodeSlots()}
@@ -359,13 +531,14 @@ function render() {
       </div>
       <nav class="mode-tabs" aria-label="练习模式">${modeButtons}</nav>
     </header>
+    ${renderTimerBar()}
     ${renderStats()}
     <main class="main">
       <section class="practice-card" id="practice-card" tabindex="0">
         <div class="hints-row">
           <span><kbd>Space</kbd> 朗读</span>
           <span><kbd>Esc</kbd> 清空当前输入</span>
-          <span>直接敲击声母 + 韵母两键</span>
+          <span>句子/文章全对时自动下一篇</span>
         </div>
         ${stage}
         <input id="key-mirror" class="input-mirror" autocomplete="off" autocapitalize="off" spellcheck="false" />
@@ -378,15 +551,46 @@ function render() {
       </div>
       ${renderKeyboard()}
     </main>
-    <p class="footer-note">本地练习 · 偏好已自动保存 · 灵感来自 ulpb.app</p>
+    <p class="footer-note">本地练习 · 文章模式收录唐诗 · 偏好已自动保存</p>
   `
 
   bindEvents()
 }
 
+function restartRound() {
+  resetSessionStats()
+  if (state.mode === 'character') nextCharacter()
+  else startPassage(state.mode)
+  startSession()
+  render()
+  focusApp()
+}
+
 function bindEvents() {
   document.querySelectorAll('[data-mode]').forEach((btn) => {
     btn.addEventListener('click', () => setMode(btn.dataset.mode))
+  })
+
+  document.querySelectorAll('[data-duration]').forEach((btn) => {
+    btn.addEventListener('click', () => setDuration(btn.dataset.duration))
+  })
+
+  document.querySelector('#custom-duration')?.addEventListener('change', (e) => {
+    setDuration(e.target.value)
+  })
+
+  document.querySelector('#btn-start-timer')?.addEventListener('click', () => {
+    startSession()
+    render()
+    focusApp()
+  })
+
+  document.querySelector('#btn-end-timer')?.addEventListener('click', () => {
+    endSession()
+  })
+
+  document.querySelectorAll('#btn-restart-timer').forEach((btn) => {
+    btn.addEventListener('click', restartRound)
   })
 
   document.querySelector('#kb-toggle')?.addEventListener('click', () => {
@@ -396,9 +600,11 @@ function bindEvents() {
   })
 
   document.querySelector('#btn-skip')?.addEventListener('click', () => {
+    if (state.sessionFinished) return
+    clearAdvanceTimer()
     if (state.mode === 'character') {
       nextCharacter()
-    } else if (!state.completed) {
+    } else {
       startPassage(state.mode)
     }
     state.buffer = ''
@@ -423,6 +629,7 @@ function bindEvents() {
   })
 
   document.querySelector('#btn-next-passage')?.addEventListener('click', () => {
+    if (state.sessionFinished) return
     startPassage(state.mode)
     render()
     focusApp()
@@ -432,6 +639,7 @@ function bindEvents() {
   const card = document.querySelector('#practice-card')
   card?.addEventListener('click', focusApp)
   mirror?.addEventListener('keydown', (e) => {
+    if (e.target?.id === 'custom-duration') return
     if (e.key === 'Escape') {
       e.preventDefault()
       state.buffer = ''
@@ -457,20 +665,23 @@ function bindEvents() {
     }
   })
 
-  // Keep focus
   focusApp()
 }
 
-// Global fallback so typing works even if mirror loses focus
 window.addEventListener('keydown', (e) => {
   const tag = document.activeElement?.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return
+  const id = document.activeElement?.id
+  if (tag === 'INPUT' || tag === 'TEXTAREA') {
+    if (id === 'custom-duration') return
+    if (id !== 'key-mirror') return
+  }
   if (e.key === 'Escape') {
     state.buffer = ''
     render()
     return
   }
   if (e.key === ' ' || e.code === 'Space') {
+    if (id === 'custom-duration') return
     e.preventDefault()
     speakCurrent()
     return
@@ -481,25 +692,30 @@ window.addEventListener('keydown', (e) => {
   }
 })
 
-// Live stats tick
-setInterval(() => {
-  if (!state.startedAt || state.completed) return
+if (tickHandle) clearInterval(tickHandle)
+tickHandle = setInterval(() => {
+  updateTimerDisplay()
+  if (!state.startedAt || state.sessionFinished) return
   const values = document.querySelectorAll('.stat .value')
   if (values.length >= 6) {
     values[3].textContent = `${accuracy()}%`
     values[4].textContent = String(cpm())
     values[5].textContent = String(kpm())
   }
-}, 1000)
+}, 250)
 
-// Boot
 if (import.meta.env.DEV) {
   const results = selfTest()
   const failed = results.filter((r) => !r.ok)
   if (failed.length) console.warn('Xiaohe self-test failures', failed)
   else console.info('Xiaohe self-test passed', results.length)
+
+  for (const a of ARTICLES) {
+    buildUnits(a.text, a.pinyin)
+  }
 }
 
+state.remainingMs = state.durationMinutes * 60 * 1000
 if (state.mode === 'character') nextCharacter()
 else startPassage(state.mode)
 

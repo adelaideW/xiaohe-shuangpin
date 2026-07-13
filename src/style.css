@@ -132,6 +132,163 @@ body::before {
   transform: scale(0.97);
 }
 
+.timer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0.65rem auto 0;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  width: calc(100% - 3rem);
+  max-width: 1072px;
+}
+
+.timer-left,
+.timer-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timer-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-right: 0.15rem;
+}
+
+.dur-group {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.dur-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.dur-btn:hover:not(:disabled) {
+  border-color: var(--jade);
+  color: var(--jade-deep);
+}
+
+.dur-btn.active {
+  background: var(--jade);
+  border-color: var(--jade);
+  color: #fff;
+}
+
+.dur-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.custom-dur {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.custom-dur input {
+  width: 3.2rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.3rem 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  background: var(--surface-solid);
+  color: var(--ink);
+}
+
+.timer-value {
+  font-family: var(--font-mono);
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 4.2rem;
+  text-align: right;
+}
+
+.timer-value.urgent {
+  color: var(--coral);
+  animation: pulse 1s ease infinite;
+}
+
+.timer-value.done {
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.timer-value.idle {
+  color: var(--ink-soft);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.timer-right .primary,
+.timer-right button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.timer-right .primary {
+  background: var(--jade);
+  border-color: var(--jade);
+  color: #fff;
+}
+
+.timer-right .primary:hover {
+  background: var(--jade-deep);
+}
+
+.advance-hint {
+  color: var(--jade) !important;
+  font-size: 0.9rem;
+}
+
+.passage.poem {
+  text-align: center;
+  line-height: 2.15;
+  letter-spacing: 0.04em;
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

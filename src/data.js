@@ -271,65 +271,158 @@ export const SENTENCES = [
   },
 ]
 
-export const ARTICLES = [
-  {
-    title: '春',
-    text: '盼望着，盼望着，东风来了，春天的脚步近了。一切都像刚睡醒的样子，欣欣然张开了眼。山朗润起来了，水涨起来了，太阳的脸红起来了。',
-    pinyin: [
-      'pan', 'wang', 'zhe', null, 'pan', 'wang', 'zhe', null, 'dong', 'feng', 'lai', 'le', null,
-      'chun', 'tian', 'de', 'jiao', 'bu', 'jin', 'le', null,
-      'yi', 'qie', 'dou', 'xiang', 'gang', 'shui', 'xing', 'de', 'yang', 'zi', null,
-      'xin', 'xin', 'ran', 'zhang', 'kai', 'le', 'yan', null,
-      'shan', 'lang', 'run', 'qi', 'lai', 'le', null,
-      'shui', 'zhang', 'qi', 'lai', 'le', null,
-      'tai', 'yang', 'de', 'lian', 'hong', 'qi', 'lai', 'le', null,
-    ],
-  },
-  {
-    title: '双拼小记',
-    text: '刚开始学双拼时，难免会觉得别扭。声母和韵母被压缩到两个键上，手指需要重新建立肌肉记忆。但只要坚持练习几天，你就会发现打字节奏变得更加稳定，击键次数明显减少。小鹤双拼的键位设计兼顾左右手负担，特别适合长时间写作。',
-    pinyin: [
-      'gang', 'kai', 'shi', 'xue', 'shuang', 'pin', 'shi', null,
-      'nan', 'mian', 'hui', 'jue', 'de', 'bie', 'niu', null,
-      'sheng', 'mu', 'he', 'yun', 'mu', 'bei', 'ya', 'suo', 'dao', 'liang', 'ge', 'jian', 'shang', null,
-      'shou', 'zhi', 'xu', 'yao', 'zhong', 'xin', 'jian', 'li', 'ji', 'rou', 'ji', 'yi', null,
-      'dan', 'zhi', 'yao', 'jian', 'chi', 'lian', 'xi', 'ji', 'tian', null,
-      'ni', 'jiu', 'hui', 'fa', 'xian', 'da', 'zi', 'jie', 'zou', 'bian', 'de', 'geng', 'jia', 'wen', 'ding', null,
-      'ji', 'jian', 'ci', 'shu', 'ming', 'xian', 'jian', 'shao', null,
-      'xiao', 'he', 'shuang', 'pin', 'de', 'jian', 'wei', 'she', 'ji', 'jian', 'gu', 'zuo', 'you', 'shou', 'fu', 'dan', null,
-      'te', 'bie', 'shi', 'he', 'chang', 'shi', 'jian', 'xie', 'zuo', null,
-    ],
-  },
-  {
-    title: '晨读',
-    text: '清晨的阳光透过窗帘洒进房间。桌上放着一杯温热的茶，旁边是昨天没有读完的书。打开窗户，能听见远处传来的鸟鸣。这样安静的时刻，最适合静下心来学习新的事物。',
-    pinyin: [
-      'qing', 'chen', 'de', 'yang', 'guang', 'tou', 'guo', 'chuang', 'lian', 'sa', 'jin', 'fang', 'jian', null,
-      'zhuo', 'shang', 'fang', 'zhe', 'yi', 'bei', 'wen', 're', 'de', 'cha', null,
-      'pang', 'bian', 'shi', 'zuo', 'tian', 'mei', 'you', 'du', 'wan', 'de', 'shu', null,
-      'da', 'kai', 'chuang', 'hu', null, 'neng', 'ting', 'jian', 'yuan', 'chu', 'chuan', 'lai', 'de', 'niao', 'ming', null,
-      'zhe', 'yang', 'an', 'jing', 'de', 'shi', 'ke', null,
-      'zui', 'shi', 'he', 'jing', 'xia', 'xin', 'lai', 'xue', 'xi', 'xin', 'de', 'shi', 'wu', null,
-    ],
-  },
-  {
-    title: '效率之道',
-    text: '提高打字速度不只是为了更快，更是为了让思路不被输入打断。当你的手指能够自动跟上大脑的节奏，写作就会变得流畅自然。双拼正是通往这种流畅感的一条捷径。从单字到词组，再从句子到文章，循序渐进，你会看见自己的进步。',
-    pinyin: [
-      'ti', 'gao', 'da', 'zi', 'su', 'du', 'bu', 'zhi', 'shi', 'wei', 'le', 'geng', 'kuai', null,
-      'geng', 'shi', 'wei', 'le', 'rang', 'si', 'lu', 'bu', 'bei', 'shu', 'ru', 'da', 'duan', null,
-      'dang', 'ni', 'de', 'shou', 'zhi', 'neng', 'gou', 'zi', 'dong', 'gen', 'shang', 'da', 'nao', 'de', 'jie', 'zou', null,
-      'xie', 'zuo', 'jiu', 'hui', 'bian', 'de', 'liu', 'chang', 'zi', 'ran', null,
-      'shuang', 'pin', 'zheng', 'shi', 'tong', 'wang', 'zhe', 'zhong', 'liu', 'chang', 'gan', 'de', 'yi', 'tiao', 'jie', 'jing', null,
-      'cong', 'dan', 'zi', 'dao', 'ci', 'zu', null, 'zai', 'cong', 'ju', 'zi', 'dao', 'wen', 'zhang', null,
-      'xun', 'xu', 'jian', 'jin', null, 'ni', 'hui', 'kan', 'jian', 'zi', 'ji', 'de', 'jin', 'bu', null,
-    ],
-  },
-]
-
 export function isHanzi(ch) {
   return /[\u4e00-\u9fff]/.test(ch)
 }
+
+/**
+ * Build a passage from text + hanzi-only pinyin list (punctuation → null).
+ * @param {string} title
+ * @param {string} text
+ * @param {string[]} syllables
+ */
+export function makePassage(title, text, syllables) {
+  const pinyin = []
+  let si = 0
+  for (const ch of text) {
+    if (isHanzi(ch)) {
+      if (si >= syllables.length) {
+        throw new Error(`Missing pinyin for「${ch}」in ${title}`)
+      }
+      pinyin.push(syllables[si++])
+    } else {
+      pinyin.push(null)
+    }
+  }
+  if (si !== syllables.length) {
+    throw new Error(`Extra pinyin in ${title}: got ${syllables.length}, used ${si}`)
+  }
+  return { title, text, pinyin }
+}
+
+/** Classic Tang poems for article practice. */
+export const ARTICLES = [
+  makePassage(
+    '静夜思 · 李白',
+    '床前明月光，疑是地上霜。举头望明月，低头思故乡。',
+    [
+      'chuang', 'qian', 'ming', 'yue', 'guang',
+      'yi', 'shi', 'di', 'shang', 'shuang',
+      'ju', 'tou', 'wang', 'ming', 'yue',
+      'di', 'tou', 'si', 'gu', 'xiang',
+    ],
+  ),
+  makePassage(
+    '春晓 · 孟浩然',
+    '春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。',
+    [
+      'chun', 'mian', 'bu', 'jue', 'xiao',
+      'chu', 'chu', 'wen', 'ti', 'niao',
+      'ye', 'lai', 'feng', 'yu', 'sheng',
+      'hua', 'luo', 'zhi', 'duo', 'shao',
+    ],
+  ),
+  makePassage(
+    '登鹳雀楼 · 王之涣',
+    '白日依山尽，黄河入海流。欲穷千里目，更上一层楼。',
+    [
+      'bai', 'ri', 'yi', 'shan', 'jin',
+      'huang', 'he', 'ru', 'hai', 'liu',
+      'yu', 'qiong', 'qian', 'li', 'mu',
+      'geng', 'shang', 'yi', 'ceng', 'lou',
+    ],
+  ),
+  makePassage(
+    '悯农 · 李绅',
+    '锄禾日当午，汗滴禾下土。谁知盘中餐，粒粒皆辛苦。',
+    [
+      'chu', 'he', 'ri', 'dang', 'wu',
+      'han', 'di', 'he', 'xia', 'tu',
+      'shui', 'zhi', 'pan', 'zhong', 'can',
+      'li', 'li', 'jie', 'xin', 'ku',
+    ],
+  ),
+  makePassage(
+    '江雪 · 柳宗元',
+    '千山鸟飞绝，万径人踪灭。孤舟蓑笠翁，独钓寒江雪。',
+    [
+      'qian', 'shan', 'niao', 'fei', 'jue',
+      'wan', 'jing', 'ren', 'zong', 'mie',
+      'gu', 'zhou', 'suo', 'li', 'weng',
+      'du', 'diao', 'han', 'jiang', 'xue',
+    ],
+  ),
+  makePassage(
+    '相思 · 王维',
+    '红豆生南国，春来发几枝。愿君多采撷，此物最相思。',
+    [
+      'hong', 'dou', 'sheng', 'nan', 'guo',
+      'chun', 'lai', 'fa', 'ji', 'zhi',
+      'yuan', 'jun', 'duo', 'cai', 'xie',
+      'ci', 'wu', 'zui', 'xiang', 'si',
+    ],
+  ),
+  makePassage(
+    '咏鹅 · 骆宾王',
+    '鹅鹅鹅，曲项向天歌。白毛浮绿水，红掌拨清波。',
+    [
+      'e', 'e', 'e',
+      'qu', 'xiang', 'xiang', 'tian', 'ge',
+      'bai', 'mao', 'fu', 'lü', 'shui',
+      'hong', 'zhang', 'bo', 'qing', 'bo',
+    ],
+  ),
+  makePassage(
+    '寻隐者不遇 · 贾岛',
+    '松下问童子，言师采药去。只在此山中，云深不知处。',
+    [
+      'song', 'xia', 'wen', 'tong', 'zi',
+      'yan', 'shi', 'cai', 'yao', 'qu',
+      'zhi', 'zai', 'ci', 'shan', 'zhong',
+      'yun', 'shen', 'bu', 'zhi', 'chu',
+    ],
+  ),
+  makePassage(
+    '绝句 · 杜甫',
+    '两个黄鹂鸣翠柳，一行白鹭上青天。窗含西岭千秋雪，门泊东吴万里船。',
+    [
+      'liang', 'ge', 'huang', 'li', 'ming', 'cui', 'liu',
+      'yi', 'hang', 'bai', 'lu', 'shang', 'qing', 'tian',
+      'chuang', 'han', 'xi', 'ling', 'qian', 'qiu', 'xue',
+      'men', 'bo', 'dong', 'wu', 'wan', 'li', 'chuan',
+    ],
+  ),
+  makePassage(
+    '早发白帝城 · 李白',
+    '朝辞白帝彩云间，千里江陵一日还。两岸猿声啼不住，轻舟已过万重山。',
+    [
+      'zhao', 'ci', 'bai', 'di', 'cai', 'yun', 'jian',
+      'qian', 'li', 'jiang', 'ling', 'yi', 'ri', 'huan',
+      'liang', 'an', 'yuan', 'sheng', 'ti', 'bu', 'zhu',
+      'qing', 'zhou', 'yi', 'guo', 'wan', 'chong', 'shan',
+    ],
+  ),
+  makePassage(
+    '鸟鸣涧 · 王维',
+    '人闲桂花落，夜静春山空。月出惊山鸟，时鸣春涧中。',
+    [
+      'ren', 'xian', 'gui', 'hua', 'luo',
+      'ye', 'jing', 'chun', 'shan', 'kong',
+      'yue', 'chu', 'jing', 'shan', 'niao',
+      'shi', 'ming', 'chun', 'jian', 'zhong',
+    ],
+  ),
+  makePassage(
+    '赠汪伦 · 李白',
+    '李白乘舟将欲行，忽闻岸上踏歌声。桃花潭水深千尺，不及汪伦送我情。',
+    [
+      'li', 'bai', 'cheng', 'zhou', 'jiang', 'yu', 'xing',
+      'hu', 'wen', 'an', 'shang', 'ta', 'ge', 'sheng',
+      'tao', 'hua', 'tan', 'shui', 'shen', 'qian', 'chi',
+      'bu', 'ji', 'wang', 'lun', 'song', 'wo', 'qing',
+    ],
+  ),
+]
 
 /** Build typed units from text + parallel pinyin array (null = punctuation). */
 export function buildUnits(text, pinyinList) {
