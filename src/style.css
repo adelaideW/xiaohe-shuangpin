@@ -1658,24 +1658,23 @@ body::before {
 
 .jp-passage.has-furigana,
 .word-display.jp-word.has-furigana {
-  line-height: 2.45;
+  line-height: 2.55;
 }
 
 .jp-passage ruby,
 .word-display.jp-word ruby {
   ruby-align: center;
+  ruby-position: over;
 }
 
 .jp-passage rt,
 .word-display.jp-word rt {
   font-size: 0.5em;
-  line-height: 1.1;
+  line-height: 1.05;
   color: var(--muted);
   font-weight: 500;
-}
-
-.jp-seg.current rt {
-  color: var(--jade-deep);
+  position: relative;
+  z-index: 2;
 }
 
 .jp-seg {
@@ -1683,6 +1682,7 @@ body::before {
   padding: 0.05em 0.04em;
   border-radius: 4px;
   transition: background 0.12s ease, color 0.12s ease;
+  display: inline;
 }
 
 .jp-seg.done {
@@ -1693,6 +1693,40 @@ body::before {
   background: var(--jade-soft);
   color: var(--jade-deep);
   box-shadow: inset 0 -2px 0 var(--jade);
+}
+
+/* With furigana: keep highlight on the base character band, under the rt */
+.jp-passage.has-furigana .jp-seg.current {
+  background: transparent;
+  box-shadow: none;
+  color: var(--jade-deep);
+}
+
+.jp-passage.has-furigana .jp-seg.current::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.72em;
+  bottom: 0;
+  background: var(--jade-soft);
+  border-radius: 4px;
+  box-shadow: inset 0 -2px 0 var(--jade);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.jp-passage.has-furigana .jp-seg.current ruby {
+  position: relative;
+  z-index: 1;
+}
+
+.jp-passage.has-furigana .jp-seg.current rt {
+  z-index: 3;
+  color: var(--muted);
+  text-shadow:
+    0 0 2px var(--surface-solid),
+    0 0 4px var(--surface-solid);
 }
 
 .jp-seg.jp-punct {
@@ -1931,11 +1965,12 @@ body::before {
 }
 
 .spk-article.has-furigana {
-  line-height: 2.05;
+  line-height: 2.35;
 }
 
 .spk-article ruby {
   ruby-align: center;
+  ruby-position: over;
 }
 
 .spk-article rt {
@@ -1943,6 +1978,41 @@ body::before {
   line-height: 1.1;
   color: var(--muted);
   font-weight: 500;
+  position: relative;
+  z-index: 2;
+}
+
+/* Keep active highlight under furigana readings */
+.spk-article.has-furigana .spk-sent.is-active {
+  background: transparent;
+  box-shadow: none;
+  position: relative;
+}
+
+.spk-article.has-furigana .spk-sent.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.75em;
+  bottom: 0;
+  background: rgba(247, 129, 102, 0.22);
+  box-shadow: inset 0 -2px 0 rgba(247, 129, 102, 0.55);
+  border-radius: 0.2em;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.spk-article.has-furigana .spk-sent.is-active ruby {
+  position: relative;
+  z-index: 1;
+}
+
+.spk-article.has-furigana .spk-sent.is-active rt {
+  z-index: 3;
+  text-shadow:
+    0 0 2px var(--surface-solid),
+    0 0 4px var(--surface-solid);
 }
 
 .spk-listen {

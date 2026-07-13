@@ -434,6 +434,9 @@ export function bootSpeaking(root, opts) {
   }
 
   async function render() {
+    if (language === 'ja') {
+      settings = loadJapaneseSettings()
+    }
     const sents = sentences()
     const gradedCount = state.results.filter(Boolean).length
     const avg = gradedCount
