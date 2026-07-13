@@ -156,3 +156,48 @@ export function countEnglishChars(text) {
 export function countEnglishWords(text) {
   return (String(text || '').toLowerCase().match(/[a-z0-9']+/g) || []).length
 }
+
+/**
+ * Grow/trim English article text to [minWords, maxWords] by cycling extras.
+ * @param {{ title: string, text: string }} passage
+ * @param {number} minWords
+ * @param {number} maxWords
+ * @param {{ title: string, text: string }[]} [extraPassages]
+ */
+export function fitEnglishPassage(passage, minWords, maxWords, extraPassages = []) {
+  let min = Math.max(1, Math.floor(Number(minWords) || 1))
+  let max = Math.max(1, Math.floor(Number(maxWords) || min))
+  if (min > max) min = max
+
+  const pool = [passage, ...extraPassages].filter((p) => p?.text?.trim())
+  if (!pool.length) return { title: passage?.title || 'Article', text: '' }
+
+  let text = String(passage?.text || '').trim()
+  const extrasFirst = pool.filter((p) => p !== passage)
+  const cycle = extrasFirst.length ? [...extrasFirst, passage] : pool
+  let guard = 0
+  let idx = 0
+  while (countEnglishWords(text) < min && guard < 40) {
+    const next = cycle[idx % cycle.length]
+    idx += 1
+    guard += 1
+    const chunk = String(next.text || '').trim()
+    if (!chunk) continue
+    text = text ? `${text} ${chunk}` : chunk
+  }
+
+  if (countEnglishWords(text) > max) {
+    const words = text.match(/[A-Za-z0-9']+|[^\sA-Za-z0-9']+/g) || []
+    let acc = ''
+    let count = 0
+    for (const part of words) {
+      const isWord = /[A-Za-z0-9']/.test(part)
+      if (isWord && count >= max) break
+      acc += part
+      if (isWord) count += 1
+    }
+    text = acc.trim()
+  }
+
+  return { title: passage?.title || 'Article', text }
+}

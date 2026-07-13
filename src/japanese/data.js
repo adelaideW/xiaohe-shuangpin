@@ -7,11 +7,13 @@
  */
 
 import { punctTypingKey } from '../punct.js'
+import { AOZORA_PASSAGES } from './aozoraBank.js'
 
 /** @typedef {{ surface: string, kana: string | null }} JpSegment */
 /** @typedef {{ title: string, segments: JpSegment[] }} JpPassage */
 
 export { JP_SENTENCES } from './sentences.generated.js'
+export { AOZORA_PASSAGES } from './aozoraBank.js'
 
 /** @type {JpPassage[]} */
 export const JP_WORDS = [
@@ -181,6 +183,7 @@ export const JP_ARTICLES = [
       { surface: '。', kana: null },
     ],
   },
+  ...AOZORA_PASSAGES,
 ]
 
 /**

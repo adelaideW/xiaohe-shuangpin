@@ -587,7 +587,13 @@ export function bootSpeaking(root, opts) {
               language === 'ja'
                 ? `<label class="opt-row">
               <input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} />
-              <span>漢字にひらがなを表示</span>
+              <span>${
+                t(
+                  'Show hiragana above kanji',
+                  '漢字にひらがな（ふりがな）を表示',
+                  '在汉字上方显示假名',
+                )
+              }</span>
             </label>`
                 : ''
             }

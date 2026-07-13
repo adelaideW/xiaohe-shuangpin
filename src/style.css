@@ -1656,6 +1656,28 @@ body::before {
   letter-spacing: 0.02em;
 }
 
+.jp-passage.has-furigana,
+.word-display.jp-word.has-furigana {
+  line-height: 2.45;
+}
+
+.jp-passage ruby,
+.word-display.jp-word ruby {
+  ruby-align: center;
+}
+
+.jp-passage rt,
+.word-display.jp-word rt {
+  font-size: 0.5em;
+  line-height: 1.1;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.jp-seg.current rt {
+  color: var(--jade-deep);
+}
+
 .jp-seg {
   position: relative;
   padding: 0.05em 0.04em;

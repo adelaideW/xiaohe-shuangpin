@@ -107,6 +107,23 @@ function hintHiragana(kana) {
 }
 
 /**
+ * Surface for passage display — optional ruby (furigana) over kanji.
+ * @param {{ surface: string, kana: string | null }} seg
+ * @param {boolean} showFurigana
+ */
+function segmentSurfaceHtml(seg, showFurigana) {
+  const surface = seg?.surface || ''
+  if (surface === ' ' || surface === '\u3000') return '&nbsp;'
+  if (surface === '\n') return '<br />'
+  const escaped = escapeHtml(surface)
+  if (!showFurigana || !seg.kana) return escaped
+  if (!/[\u4E00-\u9FFF々〆ヵヶ]/.test(surface)) return escaped
+  const reading = escapeHtml(hintHiragana(seg.kana))
+  if (!reading || reading === escaped) return escaped
+  return `<ruby>${escaped}<rt>${reading}</rt></ruby>`
+}
+
+/**
  * @param {HTMLElement} root
  */
 export function bootJapanese(root) {
@@ -558,7 +575,7 @@ export function bootJapanese(root) {
     }
 
     if (state.drawer === 'settings') {
-      if (lengthChanged) {
+      if (lengthChanged || 'speakShowHiragana' in patch) {
         render()
       } else if ('timerMode' in patch) {
         renderTimerControls()
@@ -836,7 +853,8 @@ export function bootJapanese(root) {
 
     const segs = state.passage.segments || []
     const cur = currentTarget()
-    const word = segs.map((seg) => seg.surface).join('')
+    const showFuri = settings.speakShowHiragana
+    const wordHtml = segs.map((seg) => segmentSurfaceHtml(seg, showFuri)).join('')
 
     const exp = currentExpected()
     const slots = [...exp]
@@ -857,7 +875,7 @@ export function bootJapanese(root) {
 
     return `
       <div class="char-stage word-stage">
-        <div class="hanzi word-display jp-word">${escapeHtml(word)}</div>
+        <div class="hanzi word-display jp-word${showFuri ? ' has-furigana' : ''}">${wordHtml}</div>
         <div class="pinyin-line">${hintText}</div>
         <div class="code-progress">${slots}</div>
       </div>`
@@ -891,6 +909,7 @@ export function bootJapanese(root) {
     const pageSegStart = state.units[page.start]?.index ?? 0
     const pageSegEnd = state.units[page.end - 1]?.index ?? pageSegStart
     const segs = state.passage.segments || []
+    const showFuri = settings.speakShowHiragana
 
     const chars = segs
       .map((seg, i) => {
@@ -903,9 +922,7 @@ export function bootJapanese(root) {
         if (seg.surface === ' ' || seg.surface === '\u3000') classes.push('jp-space')
         if (doneSeg.has(i)) classes.push('done')
         if (cur && i === cur.index) classes.push('current')
-        const show =
-          seg.surface === ' ' || seg.surface === '\u3000' ? '&nbsp;' : escapeHtml(seg.surface)
-        return `<span class="${classes.join(' ')}" data-seg="${i}">${show}</span>`
+        return `<span class="${classes.join(' ')}" data-seg="${i}">${segmentSurfaceHtml(seg, showFuri)}</span>`
       })
       .join('')
 
@@ -949,7 +966,7 @@ export function bootJapanese(root) {
             : ''
         }
         <div class="passage-scroll">
-          <div class="passage poem jp-passage">${chars}</div>
+          <div class="passage poem jp-passage${showFuri ? ' has-furigana' : ''}">${chars}</div>
         </div>
         <div class="typing-chrome">
           <div class="pinyin-line">${cur ? `${hira} · ${exp}` : ''}</div>
@@ -1021,7 +1038,7 @@ export function bootJapanese(root) {
             <label class="opt-row"><input type="checkbox" id="set-cover" ${settings.keyboardCovered ? 'checked' : ''} /><span>キーボードを隠す</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak" ${settings.speakOnCorrect ? 'checked' : ''} /><span>正解で読み上げ</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} /><span>文をクリックしたとき読み上げ（スピーキング）</span></label>
-            <label class="opt-row"><input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} /><span>スピーキングで漢字にひらがなを表示</span></label>
+            <label class="opt-row"><input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} /><span>漢字にひらがな（ふりがな）を表示</span></label>
             <div class="opt-block">
               <h3 class="opt-block-title">文章の長さ</h3>
               <p class="drawer-lead">時間か文字数のどちらか一方だけ適用されます。最小と最大を設定します。</p>

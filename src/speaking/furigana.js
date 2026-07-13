@@ -41,9 +41,12 @@ export async function toFuriganaHtml(text) {
   if (!raw.trim()) return ''
   try {
     const k = await getKuroshiro()
-    return await k.convert(raw, { mode: 'furigana', to: 'hiragana' })
+    const html = await k.convert(raw, { mode: 'furigana', to: 'hiragana' })
+    if (html && html !== raw) return html
+    // Kuroshiro sometimes returns plain text — wrap kanji via okurigana form if present
+    return html || raw
   } catch (err) {
     console.warn('Furigana convert failed', err)
-    return ''
+    return raw
   }
 }

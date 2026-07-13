@@ -16,6 +16,7 @@ import {
   pageIndexForUnit,
   countEnglishChars,
   countEnglishWords,
+  fitEnglishPassage,
 } from './data.js'
 import {
   loadEnglishMistakes,
@@ -28,6 +29,8 @@ import { loadEnglishLibrary, addEnglishDoc, removeEnglishDoc } from './library.j
 import { extractFromFile } from '../upload.js'
 import { isTypablePunct, punctTypingKey, isTypableSpace } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
+import { speakBudgetFromMinutes } from '../speaking/length.js'
+import { FALLBACK_LESSONS } from '../speaking/lessons.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -324,14 +327,39 @@ export function bootEnglish(root) {
     })
   }
 
-  function getArticlePool() {
-    const min = settings.speakMinCount || settings.minArticleChars || 20
-    const built = ENGLISH_ARTICLES.filter((p) => countEnglishWords(p.text) >= min)
-    const user = loadEnglishLibrary()
-      .map((d) => ({ title: d.title, text: d.text }))
-      .filter((p) => countEnglishWords(p.text) >= min)
-    const pool = [...built, ...user]
-    return pool.length ? pool : ENGLISH_ARTICLES
+  function articleLengthBounds() {
+    if (settings.speakLimitMode === 'count') {
+      let min = Math.max(1, Number(settings.speakMinCount) || 40)
+      let max = Math.max(1, Number(settings.speakMaxCount) || 150)
+      if (min > max) min = max
+      return { min, max }
+    }
+    const min = speakBudgetFromMinutes('en', settings.speakMinMinutes || 1)
+    const max = speakBudgetFromMinutes('en', settings.speakMaxMinutes || 5)
+    return { min: Math.min(min, max), max: Math.max(min, max) }
+  }
+
+  function allEnglishArticleSources() {
+    const user = loadEnglishLibrary().map((d) => ({ title: d.title, text: d.text }))
+    const speaking = (FALLBACK_LESSONS.en || []).map((l) => ({
+      title: l.title,
+      text: l.article,
+    }))
+    return [...ENGLISH_ARTICLES, ...speaking, ...user]
+  }
+
+  function pickFittedArticle(avoid) {
+    const { min, max } = articleLengthBounds()
+    const sources = allEnglishArticleSources()
+    if (!sources.length) return null
+    const longEnough = sources.filter((p) => countEnglishWords(p.text) >= min)
+    const basePool = longEnough.length ? longEnough : sources
+    const basePassage = shufflePick(basePool, avoid)
+    if (!basePassage) return null
+    const fillers = sources
+      .filter((p) => p !== basePassage)
+      .sort(() => Math.random() - 0.5)
+    return fitEnglishPassage(basePassage, min, max, fillers)
   }
 
   function pickPassage(mode) {
@@ -343,7 +371,7 @@ export function bootEnglish(root) {
       return { title: 'Word', text: String(word) }
     }
     if (mode === 'article') {
-      return shufflePick(getArticlePool(), state.passage)
+      return pickFittedArticle(state.passage)
     }
     return shufflePick(ENGLISH_SENTENCES, state.passage)
   }
