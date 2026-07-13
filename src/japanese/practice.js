@@ -461,6 +461,24 @@ export function bootJapanese(root) {
       state.pages = buildJapanesePages(state.units, settings.charsPerPage)
       state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
     }
+
+    // Keyboard cover only — update in place so the article card does not blink.
+    if (
+      Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered') &&
+      Object.keys(patch).every((k) => k === 'keyboardCovered')
+    ) {
+      document.querySelector('.keyboard')?.classList.toggle('covered', settings.keyboardCovered)
+      const kbToggle = document.querySelector('#kb-toggle')
+      if (kbToggle) {
+        kbToggle.textContent = settings.keyboardCovered ? 'キーボード表示' : 'キーボード非表示'
+      }
+      const coverCheckbox = document.querySelector('#set-cover')
+      if (coverCheckbox instanceof HTMLInputElement) {
+        coverCheckbox.checked = settings.keyboardCovered
+      }
+      return
+    }
+
     if (state.drawer === 'settings') {
       if (
         'speakLimitMode' in patch ||
@@ -1090,6 +1108,9 @@ export function bootJapanese(root) {
     `
     bindEvents()
     state.drawerJustOpened = false
+    requestAnimationFrame(() => {
+      document.querySelector('.practice-card')?.classList.remove('enter')
+    })
   }
 
   function restartRound() {
