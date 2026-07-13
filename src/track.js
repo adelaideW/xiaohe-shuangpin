@@ -12,19 +12,19 @@ export const TRACKS = [
   {
     id: 'shuangpin',
     label: '双拼',
-    sub: '中文 · 小鹤 / 自然码 / 搜狗',
+    sub: '打字 & 口语',
     short: '拼',
   },
   {
     id: 'english',
     label: 'English',
-    sub: 'QWERTY · words & passages',
+    sub: 'Typing & speaking',
     short: 'En',
   },
   {
     id: 'japanese',
     label: '日本語',
-    sub: 'Romaji · ひらがなヒント',
+    sub: 'タイピング & スピーキング',
     short: '日',
   },
 ]

@@ -1,7 +1,9 @@
 /**
  * English practice content — words, sentences, quotes / short essays.
- * Character counting matches 双拼 rule: only letters/digits count (spaces & punctuation skipped when typing).
+ * Typing includes punctuation; length metrics still count letters/digits only.
  */
+
+import { isTypablePunct } from '../punct.js'
 
 /** @typedef {{ title: string, text: string }} Passage */
 
@@ -82,13 +84,18 @@ export const ENGLISH_ARTICLES = [
   },
 ]
 
-/** Letters & digits only — same role as 汉字 in 双拼. */
-export function isEnglishTypeChar(ch) {
+/** Letters & digits for word/length metrics. */
+export function isEnglishLetterOrDigit(ch) {
   return /[A-Za-z0-9]/.test(ch)
 }
 
+/** Typable practice keys: letters, digits, punctuation (spaces skipped). */
+export function isEnglishTypeChar(ch) {
+  return isEnglishLetterOrDigit(ch) || isTypablePunct(ch)
+}
+
 /**
- * Build typing units: skip spaces & punctuation (mirrored after 双拼).
+ * Build typing units: letters/digits/punctuation (spaces skipped).
  * @param {string} text
  * @returns {{ char: string, index: number }[]}
  */
@@ -122,9 +129,14 @@ export function pageIndexForUnit(pages, unitIndex) {
   return Math.max(0, pages.length - 1)
 }
 
-/** Count typeable characters (letters/digits), like 字数 for Chinese. */
+/** Count letters/digits only (like Chinese 字数). */
 export function countEnglishChars(text) {
   let n = 0
-  for (const ch of String(text || '')) if (isEnglishTypeChar(ch)) n += 1
+  for (const ch of String(text || '')) if (isEnglishLetterOrDigit(ch)) n += 1
   return n
+}
+
+/** Word count for speaking length limits. */
+export function countEnglishWords(text) {
+  return (String(text || '').toLowerCase().match(/[a-z0-9']+/g) || []).length
 }

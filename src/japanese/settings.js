@@ -2,9 +2,12 @@
  * Japanese practice settings — isolated from 双拼 / English.
  */
 
+import { DEFAULT_SPEAK_LIMIT, normalizeSpeakLimitSettings } from '../speaking/length.js'
+
 const STORAGE_KEY = 'japanese-settings'
 
 /** @typedef {'auto' | 'manual'} TimerMode */
+/** @typedef {'time' | 'count'} SpeakLimitMode */
 
 /**
  * @typedef {object} JapaneseSettings
@@ -12,6 +15,10 @@ const STORAGE_KEY = 'japanese-settings'
  * @property {TimerMode} timerMode
  * @property {boolean} keyboardCovered
  * @property {boolean} speakOnCorrect
+ * @property {boolean} speakOnSentenceClick
+ * @property {SpeakLimitMode} speakLimitMode
+ * @property {number} speakMaxMinutes
+ * @property {number} speakMaxCount
  * @property {boolean} autoAdvancePerfect
  * @property {boolean} autoAdvanceWithMistakes
  * @property {number} durationMinutes
@@ -25,6 +32,9 @@ export const DEFAULT_JAPANESE_SETTINGS = {
   timerMode: 'auto',
   keyboardCovered: false,
   speakOnCorrect: false,
+  speakOnSentenceClick: true,
+  ...DEFAULT_SPEAK_LIMIT,
+  speakMaxCount: 200,
   autoAdvancePerfect: true,
   autoAdvanceWithMistakes: true,
   durationMinutes: 5,
@@ -42,6 +52,7 @@ export function loadJapaneseSettings() {
     base.minArticleChars = Math.max(1, Math.min(500, Number(base.minArticleChars) || 20))
     base.charsPerPage = Math.max(10, Math.min(120, Number(base.charsPerPage) || 40))
     base.durationMinutes = Math.max(1, Math.min(60, Number(base.durationMinutes) || 5))
+    Object.assign(base, normalizeSpeakLimitSettings(base, 'ja'))
     // One-time: show keyboard by default for Japanese (hiragana labels)
     if (!localStorage.getItem('japanese-mig-kb-shown')) {
       base.keyboardCovered = false

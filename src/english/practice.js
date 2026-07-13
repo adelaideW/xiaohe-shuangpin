@@ -25,6 +25,7 @@ import {
 } from './mistakes.js'
 import { loadEnglishLibrary, addEnglishDoc, removeEnglishDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
+import { isTypablePunct, punctTypingKey } from '../punct.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -39,11 +40,9 @@ const DURATION_PRESETS = [3, 5, 10, 15]
 const IDLE_PAUSE_MS = 60_000
 
 const QWERTY = [
-  ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='],
-  ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']'],
+  ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
   ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'"],
-  ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/'],
-  [' '],
+  ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?', '!'],
 ]
 
 function loadMode() {
@@ -148,6 +147,7 @@ export function bootEnglish(root) {
   }
 
   function matchesExpected(typed, expected) {
+    if (isTypablePunct(expected)) return typed === punctTypingKey(expected)
     if (settings.caseSensitive) return typed === expected
     return typed.toLowerCase() === expected.toLowerCase()
   }
@@ -465,7 +465,16 @@ export function bootEnglish(root) {
       state.pages = buildEnglishPages(state.units, settings.charsPerPage)
       state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
     }
-    if (state.drawer === 'settings') return
+    if (state.drawer === 'settings') {
+      if (
+        'speakLimitMode' in patch ||
+        'speakMaxMinutes' in patch ||
+        'speakMaxCount' in patch
+      ) {
+        render()
+      }
+      return
+    }
     render()
     focusApp()
   }
@@ -661,6 +670,7 @@ export function bootEnglish(root) {
     if (!t) return ''
     const ch = t.char
     if (ch === ' ') return ' '
+    if (isTypablePunct(ch)) return punctTypingKey(ch)
     return ch.toLowerCase()
   }
 
@@ -912,7 +922,7 @@ export function bootEnglish(root) {
           <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="Close">×</button>
         </div>
         <div class="drawer-body">
-          <p class="drawer-lead">These settings apply only to English practice. Character counts ignore spaces & punctuation (same idea as Chinese 字数).</p>
+          <p class="drawer-lead">These settings apply only to English practice. Article length counts letters/digits (spaces skipped).</p>
           <section class="drawer-section">
             <h3>Practice</h3>
             <label class="opt-row">
@@ -977,6 +987,29 @@ export function bootEnglish(root) {
               <span>Speak each character when correct</span>
             </label>
             <label class="opt-row">
+              <input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} />
+              <span>Read when clicking on a sentence (Speaking)</span>
+            </label>
+            <div class="opt-block">
+              <p class="drawer-lead" style="margin-bottom:0.5rem">Speaking length — use <strong>either</strong> time or word count</p>
+              <label class="opt-row">
+                <input type="radio" name="speak-limit-mode" id="set-speak-mode-time" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
+                <span>Max minutes</span>
+              </label>
+              <label class="field-row">
+                <span>Minutes</span>
+                <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              </label>
+              <label class="opt-row">
+                <input type="radio" name="speak-limit-mode" id="set-speak-mode-count" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
+                <span>Max words</span>
+              </label>
+              <label class="field-row">
+                <span>Words</span>
+                <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              </label>
+            </div>
+            <label class="opt-row">
               <input type="checkbox" id="set-auto-advance" ${settings.autoAdvancePerfect ? 'checked' : ''} />
               <span>Auto-next when perfect</span>
             </label>
@@ -1010,11 +1043,10 @@ export function bootEnglish(root) {
 
     root.innerHTML = `
       <header class="topbar">
-        <div class="brand">
-          <h1>English typing</h1>
+        <div class="brand brand-modes">
+          <nav class="mode-tabs" aria-label="Practice mode">${modeButtons}</nav>
           <span class="scheme">QWERTY</span>
         </div>
-        <nav class="mode-tabs" aria-label="Practice mode">${modeButtons}</nav>
         <div class="top-actions">
           <button type="button" class="ghost-chip" id="btn-open-mistakes">Mistakes${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
           <button type="button" class="ghost-chip" id="btn-open-settings">Settings</button>
@@ -1026,7 +1058,7 @@ export function bootEnglish(root) {
         <section class="practice-card enter" id="practice-card" tabindex="0">
           ${renderStage()}
           <div class="hints-row hints-row-bottom">
-            <span>Type letters only · spaces & punctuation are skipped</span>
+            <span>Type letters & punctuation · spaces are skipped</span>
             <span><kbd>Esc</kbd> clear error flash</span>
             <span><kbd>⌥R</kbd> retry · <kbd>⌥N</kbd> next</span>
           </div>
@@ -1170,6 +1202,21 @@ export function bootEnglish(root) {
     })
     document.querySelector('#set-speak')?.addEventListener('change', (e) => {
       applySettingsPatch({ speakOnCorrect: e.target.checked })
+    })
+    document.querySelector('#set-speak-sentence')?.addEventListener('change', (e) => {
+      applySettingsPatch({ speakOnSentenceClick: e.target.checked })
+    })
+    document.querySelectorAll('input[name="speak-limit-mode"]').forEach((el) => {
+      el.addEventListener('change', (e) => {
+        if (!e.target.checked) return
+        applySettingsPatch({ speakLimitMode: e.target.value === 'count' ? 'count' : 'time' })
+      })
+    })
+    document.querySelector('#set-speak-minutes')?.addEventListener('change', (e) => {
+      applySettingsPatch({ speakMaxMinutes: Number(e.target.value) || 5 })
+    })
+    document.querySelector('#set-speak-count')?.addEventListener('change', (e) => {
+      applySettingsPatch({ speakMaxCount: Number(e.target.value) || 150 })
     })
     document.querySelector('#set-auto-advance')?.addEventListener('change', (e) => {
       applySettingsPatch({ autoAdvancePerfect: e.target.checked })

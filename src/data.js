@@ -1,5 +1,7 @@
 /** Practice content: characters, sentences, articles — each item has hanzi + pinyin syllables. */
 
+import { punctTypingKey } from './punct.js'
+
 export const CHARACTERS = [
   { char: '中', pinyin: 'zhong' },
   { char: '国', pinyin: 'guo' },
@@ -205,7 +207,7 @@ export const CHARACTERS = [
 
 /**
  * @typedef {{ text: string, pinyin: string[] }} Line
- * pinyin array aligns 1:1 with Chinese chars (punctuation skipped in typing).
+ * pinyin array aligns 1:1 with text (null = punctuation / typable mark).
  */
 
 export const SENTENCES = [
@@ -424,14 +426,19 @@ export const ARTICLES = [
   ),
 ]
 
-/** Build typed units from text + parallel pinyin array (null = punctuation). */
+/** Build typed units from text + parallel pinyin array (null = punctuation → typable key). */
 export function buildUnits(text, pinyinList) {
   const units = []
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
     const py = pinyinList[i]
     if (isHanzi(ch) && py) {
-      units.push({ char: ch, pinyin: py, index: i })
+      units.push({ char: ch, pinyin: py, index: i, kind: 'hanzi' })
+    } else {
+      const key = punctTypingKey(ch)
+      if (key) {
+        units.push({ char: ch, pinyin: null, expected: key, index: i, kind: 'punct' })
+      }
     }
   }
   return units

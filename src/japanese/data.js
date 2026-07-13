@@ -1,10 +1,17 @@
 /**
  * Japanese passages as surface + hiragana reading segments.
  * Type romaji for each segment; hint shows ひらがな.
+ *
+ * Sentence bank includes examples adapted from https://j-nihongo.com/
+ * (grammar 例文 with readings).
  */
+
+import { punctTypingKey } from '../punct.js'
 
 /** @typedef {{ surface: string, kana: string | null }} JpSegment */
 /** @typedef {{ title: string, segments: JpSegment[] }} JpPassage */
+
+export { JP_SENTENCES } from './sentences.generated.js'
 
 /** @type {JpPassage[]} */
 export const JP_WORDS = [
@@ -28,122 +35,6 @@ export const JP_WORDS = [
   { title: '単語', segments: [{ surface: '駅', kana: 'えき' }] },
   { title: '単語', segments: [{ surface: '時間', kana: 'じかん' }] },
   { title: '単語', segments: [{ surface: '練習', kana: 'れんしゅう' }] },
-]
-
-/** @type {JpPassage[]} */
-export const JP_SENTENCES = [
-  {
-    title: 'あいさつ',
-    segments: [
-      { surface: 'こんにちは', kana: 'こんにちは' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: 'あいさつ',
-    segments: [
-      { surface: 'ありがとう', kana: 'ありがとう' },
-      { surface: 'ございます', kana: 'ございます' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '日常',
-    segments: [
-      { surface: '今日', kana: 'きょう' },
-      { surface: 'は', kana: 'は' },
-      { surface: 'いい', kana: 'いい' },
-      { surface: '天気', kana: 'てんき' },
-      { surface: 'です', kana: 'です' },
-      { surface: 'ね', kana: 'ね' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '日常',
-    segments: [
-      { surface: '私', kana: 'わたし' },
-      { surface: 'は', kana: 'は' },
-      { surface: '日本語', kana: 'にほんご' },
-      { surface: 'を', kana: 'を' },
-      { surface: '勉強', kana: 'べんきょう' },
-      { surface: 'しています', kana: 'しています' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '日常',
-    segments: [
-      { surface: '毎朝', kana: 'まいあさ' },
-      { surface: 'コーヒー', kana: 'こーひー' },
-      { surface: 'を', kana: 'を' },
-      { surface: '飲みます', kana: 'のみます' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '日常',
-    segments: [
-      { surface: '駅', kana: 'えき' },
-      { surface: 'まで', kana: 'まで' },
-      { surface: '歩いて', kana: 'あるいて' },
-      { surface: '十', kana: 'じゅう' },
-      { surface: '分', kana: 'ふん' },
-      { surface: 'です', kana: 'です' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '友人',
-    segments: [
-      { surface: '週末', kana: 'しゅうまつ' },
-      { surface: 'に', kana: 'に' },
-      { surface: '友達', kana: 'ともだち' },
-      { surface: 'と', kana: 'と' },
-      { surface: '映画', kana: 'えいが' },
-      { surface: 'を', kana: 'を' },
-      { surface: '見に', kana: 'みに' },
-      { surface: '行きます', kana: 'いきます' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '食事',
-    segments: [
-      { surface: 'この', kana: 'この' },
-      { surface: 'ラーメン', kana: 'らーめん' },
-      { surface: 'は', kana: 'は' },
-      { surface: 'とても', kana: 'とても' },
-      { surface: 'おいしい', kana: 'おいしい' },
-      { surface: 'です', kana: 'です' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '学校',
-    segments: [
-      { surface: '先生', kana: 'せんせい' },
-      { surface: 'の', kana: 'の' },
-      { surface: '説明', kana: 'せつめい' },
-      { surface: 'は', kana: 'は' },
-      { surface: 'わかりやすい', kana: 'わかりやすい' },
-      { surface: 'です', kana: 'です' },
-      { surface: '。', kana: null },
-    ],
-  },
-  {
-    title: '気持ち',
-    segments: [
-      { surface: '少し', kana: 'すこし' },
-      { surface: '疲れた', kana: 'つかれた' },
-      { surface: 'けれど', kana: 'けれど' },
-      { surface: '、', kana: null },
-      { surface: '楽しい', kana: 'たのしい' },
-      { surface: '一日', kana: 'いちにち' },
-      { surface: 'でした', kana: 'でした' },
-      { surface: '。', kana: null },
-    ],
-  },
 ]
 
 /** @type {JpPassage[]} */
@@ -294,7 +185,7 @@ export const JP_ARTICLES = [
 
 /**
  * @param {JpPassage} passage
- * @returns {{ surface: string, kana: string, index: number, spanStart: number, spanEnd: number }[]}
+ * @returns {{ surface: string, kana: string | null, expectedKey?: string, index: number, spanStart: number, spanEnd: number, kind: 'kana' | 'punct' }[]}
  */
 export function buildJapaneseUnits(passage) {
   const units = []
@@ -313,7 +204,21 @@ export function buildJapaneseUnits(passage) {
         index: i,
         spanStart,
         spanEnd,
+        kind: 'kana',
       })
+    } else {
+      const key = punctTypingKey(surface)
+      if (key) {
+        units.push({
+          surface,
+          kana: null,
+          expectedKey: key,
+          index: i,
+          spanStart,
+          spanEnd,
+          kind: 'punct',
+        })
+      }
     }
   }
   return units

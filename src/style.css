@@ -82,6 +82,12 @@ body::before {
   gap: 0.65rem;
 }
 
+.brand.brand-modes {
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .brand h1 {
   margin: 0;
   font-family: var(--font-display);
@@ -97,6 +103,7 @@ body::before {
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   background: var(--jade-soft);
+  flex-shrink: 0;
 }
 
 /* ——— Button system ———
@@ -880,6 +887,21 @@ body::before {
   transform: translateY(-2px);
 }
 
+.key.hint {
+  border-color: var(--jade);
+  background: var(--jade-soft);
+  transform: translateY(-2px);
+}
+
+.kb-row-punct {
+  margin-top: 0.35rem;
+}
+
+.key-punct .k-init,
+.key-punct .k-final {
+  visibility: hidden;
+}
+
 .key.pressed {
   transform: translateY(1px);
   background: var(--paper-2);
@@ -940,11 +962,15 @@ body::before {
   }
 
   .brand {
-    justify-content: center;
+    justify-content: flex-start;
+  }
+
+  .brand.brand-modes {
+    justify-content: flex-start;
   }
 
   .mode-tabs {
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .stats {
@@ -1485,4 +1511,470 @@ body::before {
 .complete-banner .primary .btn-kbd {
   border-color: rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.18);
+}
+
+/* —— Skill tabs (Typing / Speaking) — GitHub-like underline —— */
+.skill-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.skill-lang-head {
+  margin: 0.85rem 1.5rem 0.15rem;
+}
+
+.skill-lang-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 2.6vw, 1.85rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.skill-lang-sub {
+  margin: 0.28rem 0 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.skill-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 0.55rem 1.5rem 0;
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.skill-tab {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.65rem;
+  padding: 0 0.9rem;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.skill-tab:hover {
+  color: var(--ink);
+}
+
+.skill-tab.active {
+  color: var(--ink);
+  font-weight: 650;
+  border-bottom-color: #f78166;
+}
+
+.skill-tab-icon {
+  display: inline-flex;
+  opacity: 0.72;
+}
+
+.skill-tab.active .skill-tab-icon {
+  opacity: 1;
+}
+
+.skill-host {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .skill-lang-head,
+  .skill-tabs {
+    margin-left: 0.85rem;
+    margin-right: 0.85rem;
+  }
+}
+
+/* —— Speaking practice —— */
+.speaking-app {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 2.5rem;
+}
+
+.spk-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.6rem 0 1rem;
+}
+
+.spk-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.spk-title {
+  margin: 0;
+  font-family: var(--font-display, var(--font-body));
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.spk-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.minutes-chip {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.spk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.spk-article {
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--ink);
+}
+
+.spk-article p {
+  margin: 0 0 1rem;
+}
+
+.spk-sent {
+  cursor: pointer;
+  border-radius: 0.2em;
+  transition: background-color 0.12s ease;
+}
+
+.spk-sent:hover {
+  background: rgba(247, 129, 102, 0.12);
+}
+
+.spk-sent.is-active {
+  background: rgba(247, 129, 102, 0.22);
+  box-shadow: inset 0 -2px 0 rgba(247, 129, 102, 0.55);
+}
+
+.spk-listen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.spk-listen .ghost-chip:disabled,
+.spk-nav .ghost-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.spk-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.spk-rate select {
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.3rem 0.45rem;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.spk-practice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line);
+}
+
+.spk-repeat-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.spk-repeat-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.spk-repeat-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.spk-counter {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.spk-mic-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 0 0.25rem;
+}
+
+.spk-mic {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: #c44a33;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.spk-mic-icon {
+  display: block;
+  pointer-events: none;
+}
+
+.spk-mic:hover {
+  border-color: rgba(247, 129, 102, 0.55);
+}
+
+.spk-mic.is-listening {
+  background: rgba(247, 129, 102, 0.16);
+  border-color: #f78166;
+  color: #c44a33;
+  box-shadow: 0 0 0 6px rgba(247, 129, 102, 0.15);
+  animation: spk-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes spk-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(247, 129, 102, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(247, 129, 102, 0.08);
+  }
+}
+
+.spk-mic-status {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.spk-live {
+  margin: 0;
+  max-width: 36rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.spk-hint {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.error-text {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.88rem;
+}
+
+.spk-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.spk-manual textarea {
+  width: 100%;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.spk-feedback {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.spk-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.spk-dot {
+  color: rgba(26, 35, 50, 0.18);
+  font-size: 0.75rem;
+}
+
+.spk-dot.filled {
+  color: #f78166;
+}
+
+.spk-summary {
+  margin: 0.45rem 0 0.7rem;
+  line-height: 1.45;
+}
+
+.spk-section-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.spk-improve {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.spk-heard {
+  margin-top: 0.65rem;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.spk-heard p {
+  margin: 0.35rem 0 0;
+  color: var(--ink);
+}
+
+.spk-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.spk-avg {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.spk-vocab {
+  margin-top: 1.25rem;
+}
+
+.spk-vocab h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.spk-vocab-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.spk-vocab-item {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.spk-vocab-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.spk-word {
+  font-weight: 650;
+  font-size: 1.05rem;
+}
+
+.spk-reading {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.spk-meaning {
+  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.spk-example {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.spk-translation {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  opacity: 0.9;
+}
+
+@media (max-width: 720px) {
+  .speaking-app {
+    padding: 0.75rem 0.85rem 2rem;
+  }
+
+  .spk-top {
+    flex-direction: column;
+  }
 }

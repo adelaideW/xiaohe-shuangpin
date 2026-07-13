@@ -27,6 +27,7 @@ import {
 } from './mistakes.js'
 import { loadJapaneseLibrary, addJapaneseDoc, removeJapaneseDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
+import { PUNCT_KEYS, punctTypingKey } from '../punct.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -158,7 +159,9 @@ export function bootJapanese(root) {
 
   function currentExpected() {
     const t = currentTarget()
-    return t ? expectedRomaji(t.kana) : ''
+    if (!t) return ''
+    if (t.kind === 'punct' || t.expectedKey) return t.expectedKey || punctTypingKey(t.surface)
+    return expectedRomaji(t.kana)
   }
 
   function accuracy() {
@@ -428,7 +431,16 @@ export function bootJapanese(root) {
       state.pages = buildJapanesePages(state.units, settings.charsPerPage)
       state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
     }
-    if (state.drawer === 'settings') return
+    if (state.drawer === 'settings') {
+      if (
+        'speakLimitMode' in patch ||
+        'speakMaxMinutes' in patch ||
+        'speakMaxCount' in patch
+      ) {
+        render()
+      }
+      return
+    }
     render()
     focusApp()
   }
@@ -505,6 +517,16 @@ export function bootJapanese(root) {
   function handleKey(key) {
     if (state.sessionFinished || state.drawer || state.completed) return
     if (!currentTarget()) return
+    const punctWant = currentTarget()?.kind === 'punct' ? currentExpected() : ''
+    if (punctWant) {
+      if (key.length !== 1) return
+      ensureSession()
+      noteActivity()
+      state.keystrokes += 1
+      if (key === punctWant) onCorrectUnit()
+      else onWrong(key)
+      return
+    }
     const lower = key === '-' ? '-' : key.toLowerCase()
     if (!/^[a-z-]$/.test(lower)) return
 
@@ -588,9 +610,13 @@ export function bootJapanese(root) {
     }
     const hint = document.querySelector('.pinyin-line')
     if (hint && cur) {
-      const hira = hintHiragana(cur.kana)
-      const roma = currentExpected()
-      hint.textContent = `${hira} · ${roma}`
+      if (cur.kind === 'punct') {
+        hint.textContent = `${cur.surface} · ${currentExpected()}`
+      } else {
+        const hira = hintHiragana(cur.kana)
+        const roma = currentExpected()
+        hint.textContent = `${hira} · ${roma}`
+      }
     }
     const slots = document.querySelector('.code-progress')
     if (slots && cur) {
@@ -819,6 +845,24 @@ export function bootJapanese(root) {
             <h3>体験</h3>
             <label class="opt-row"><input type="checkbox" id="set-cover" ${settings.keyboardCovered ? 'checked' : ''} /><span>キーボードを隠す</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak" ${settings.speakOnCorrect ? 'checked' : ''} /><span>正解で読み上げ</span></label>
+            <label class="opt-row"><input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} /><span>文をクリックしたとき読み上げ（スピーキング）</span></label>
+            <div class="opt-block">
+              <p class="drawer-lead" style="margin-bottom:0.5rem">スピーキング長さ — <strong>時間</strong>か<strong>文字数</strong>のどちらか</p>
+              <label class="opt-row">
+                <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
+                <span>最大分数</span>
+              </label>
+              <label class="field-row"><span>分</span>
+                <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              </label>
+              <label class="opt-row">
+                <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
+                <span>最大文字数</span>
+              </label>
+              <label class="field-row"><span>文字</span>
+                <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              </label>
+            </div>
             <label class="opt-row"><input type="checkbox" id="set-auto-advance" ${settings.autoAdvancePerfect ? 'checked' : ''} /><span>全正解で次へ</span></label>
             <label class="opt-row"><input type="checkbox" id="set-auto-advance-mistakes" ${settings.autoAdvanceWithMistakes ? 'checked' : ''} /><span>ミスありでも次へ</span></label>
           </section>
@@ -861,7 +905,9 @@ export function bootJapanese(root) {
       ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
       ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '-'],
       ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
+      [...PUNCT_KEYS.filter((k) => k !== '-')],
     ]
+    const cur = currentTarget()
     const nextKey = currentExpected()[state.buffer.length] || ''
     const html = rows
       .map(
@@ -870,9 +916,10 @@ export function bootJapanese(root) {
             .map((k) => {
               const hira = hiraOnKey[k] || (k === '-' ? 'ー' : '')
               const label = k === '-' ? '-' : k
-              return `<button type="button" class="key key-jp ${k === nextKey ? 'hint' : ''}" data-key="${k}" tabindex="-1">
+              const hinted = cur?.kind === 'punct' ? k === currentExpected() : k === nextKey
+              return `<button type="button" class="key key-jp ${hinted ? 'hint' : ''}" data-key="${escapeHtml(k)}" tabindex="-1">
                 <span class="k-hira">${hira}</span>
-                <span class="k-main">${label}</span>
+                <span class="k-main">${escapeHtml(label)}</span>
               </button>`
             })
             .join('')}</div>`,
@@ -900,11 +947,10 @@ export function bootJapanese(root) {
 
     root.innerHTML = `
       <header class="topbar">
-        <div class="brand">
-          <h1>日本語タイピング</h1>
+        <div class="brand brand-modes">
+          <nav class="mode-tabs">${modeButtons}</nav>
           <span class="scheme">Romaji · ひらがな</span>
         </div>
-        <nav class="mode-tabs">${modeButtons}</nav>
         <div class="top-actions">
           <button type="button" class="ghost-chip" id="btn-open-mistakes">ミス帳${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
           <button type="button" class="ghost-chip" id="btn-open-settings">設定</button>
@@ -916,7 +962,7 @@ export function bootJapanese(root) {
         <section class="practice-card enter" id="practice-card" tabindex="0">
           ${renderStage()}
           <div class="hints-row hints-row-bottom">
-            <span>ローマ字で入力 · 下に<strong>ひらがな</strong>ヒント</span>
+            <span>ローマ字＋句読点 · 下に<strong>ひらがな</strong>ヒント</span>
             <span><kbd>Esc</kbd> 入力クリア</span>
             <span><kbd>⌥R</kbd> 再挑戦 · <kbd>⌥N</kbd> 次へ</span>
           </div>
@@ -1042,6 +1088,22 @@ export function bootJapanese(root) {
     document.querySelector('#set-speak')?.addEventListener('change', (e) =>
       applySettingsPatch({ speakOnCorrect: e.target.checked }),
     )
+    document.querySelector('#set-speak-sentence')?.addEventListener('change', (e) =>
+      applySettingsPatch({ speakOnSentenceClick: e.target.checked }),
+    )
+    document.querySelectorAll('input[name="speak-limit-mode"]').forEach((el) =>
+      el.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          applySettingsPatch({ speakLimitMode: e.target.value === 'count' ? 'count' : 'time' })
+        }
+      }),
+    )
+    document.querySelector('#set-speak-minutes')?.addEventListener('change', (e) =>
+      applySettingsPatch({ speakMaxMinutes: Number(e.target.value) || 5 }),
+    )
+    document.querySelector('#set-speak-count')?.addEventListener('change', (e) =>
+      applySettingsPatch({ speakMaxCount: Number(e.target.value) || 200 }),
+    )
     document.querySelector('#set-auto-advance')?.addEventListener('change', (e) =>
       applySettingsPatch({ autoAdvancePerfect: e.target.checked }),
     )
@@ -1090,7 +1152,13 @@ export function bootJapanese(root) {
       return
     }
     if (state.drawer) return
-    if (e.key.length === 1 && /^[a-zA-Z-]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (
+      e.key.length === 1 &&
+      /^[a-zA-Z.,!?;:'"/\-]$/.test(e.key) &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.altKey
+    ) {
       e.preventDefault()
       handleKey(e.key)
     }

@@ -2,9 +2,12 @@
  * English practice settings — separate key from 双拼 (`xiaohe-settings`).
  */
 
+import { DEFAULT_SPEAK_LIMIT, normalizeSpeakLimitSettings } from '../speaking/length.js'
+
 const STORAGE_KEY = 'english-settings'
 
 /** @typedef {'auto' | 'manual'} TimerMode */
+/** @typedef {'time' | 'count'} SpeakLimitMode */
 
 /**
  * @typedef {object} EnglishSettings
@@ -12,6 +15,10 @@ const STORAGE_KEY = 'english-settings'
  * @property {TimerMode} timerMode
  * @property {boolean} keyboardCovered
  * @property {boolean} speakOnCorrect
+ * @property {boolean} speakOnSentenceClick
+ * @property {SpeakLimitMode} speakLimitMode
+ * @property {number} speakMaxMinutes
+ * @property {number} speakMaxCount
  * @property {boolean} autoAdvancePerfect
  * @property {boolean} autoAdvanceWithMistakes
  * @property {boolean} caseSensitive
@@ -24,8 +31,11 @@ const STORAGE_KEY = 'english-settings'
 export const DEFAULT_ENGLISH_SETTINGS = {
   smartPractice: false,
   timerMode: 'auto',
-  keyboardCovered: true,
+  keyboardCovered: false,
   speakOnCorrect: false,
+  speakOnSentenceClick: true,
+  ...DEFAULT_SPEAK_LIMIT,
+  speakMaxCount: 150,
   autoAdvancePerfect: true,
   autoAdvanceWithMistakes: true,
   caseSensitive: true,
@@ -44,10 +54,11 @@ export function loadEnglishSettings() {
     base.minArticleChars = Math.max(1, Math.min(2000, Number(base.minArticleChars) || 40))
     base.charsPerPage = Math.max(20, Math.min(400, Number(base.charsPerPage) || 120))
     base.durationMinutes = Math.max(1, Math.min(60, Number(base.durationMinutes) || 5))
-    // One-time: hide keyboard by default for English
-    if (!localStorage.getItem('english-mig-kb-covered')) {
-      base.keyboardCovered = true
-      localStorage.setItem('english-mig-kb-covered', '1')
+    Object.assign(base, normalizeSpeakLimitSettings(base, 'en'))
+    // One-time: show keyboard by default (align with 双拼 / 日本語)
+    if (!localStorage.getItem('english-mig-kb-shown')) {
+      base.keyboardCovered = false
+      localStorage.setItem('english-mig-kb-shown', '1')
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
       } catch {

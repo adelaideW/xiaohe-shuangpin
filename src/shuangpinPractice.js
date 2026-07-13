@@ -23,6 +23,7 @@ import {
 } from './pinyinText.js'
 import { extractFromFile } from './upload.js'
 import { loadUserLibrary, addUserDoc, removeUserDoc } from './userLibrary.js'
+import { PUNCT_KEYS, punctTypingKey } from './punct.js'
 
 const STORAGE_MODE = 'xiaohe-practice-mode'
 const STORAGE_BEST = 'xiaohe-best-combo'
@@ -110,7 +111,9 @@ function currentTarget() {
 
 function currentCode() {
   const t = currentTarget()
-  return t ? encode(settings.scheme, t.pinyin) : ''
+  if (!t) return ''
+  if (t.kind === 'punct') return t.expected || punctTypingKey(t.char)
+  return encode(settings.scheme, t.pinyin)
 }
 
 function formatTime(ms) {
@@ -523,6 +526,14 @@ function applySettingsPatch(patch) {
 
   // While settings drawer is open, avoid full-page rebuild (causes blink)
   if (state.drawer === 'settings') {
+    if (
+      'speakLimitMode' in patch ||
+      'speakMaxMinutes' in patch ||
+      'speakMaxCount' in patch
+    ) {
+      render()
+      return
+    }
     softApplySettingsVisuals(patch)
     return
   }
@@ -667,16 +678,23 @@ function patchPinyinLine() {
     line.textContent = ''
     return
   }
+  if (t.kind === 'punct') {
+    line.textContent = `${t.char} · ${currentCode()}`
+    return
+  }
   line.textContent = `${t.pinyin} · ${encode(settings.scheme, t.pinyin)}`
 }
 
 function patchKeyboardHints() {
+  const t = currentTarget()
   const code = currentCode()
-  const initKey = settings.showHints && code && !state.sessionFinished ? code[0] : ''
-  const finalKey = settings.showHints && code && !state.sessionFinished ? code[1] : ''
+  const punctKey = t?.kind === 'punct' ? code : ''
+  const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
+  const finalKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
   document.querySelectorAll('.key[data-key]').forEach((el) => {
     const keyId = el.dataset.key
+    el.classList.toggle('hint', Boolean(punctKey && keyId === punctKey))
     el.classList.toggle('hint-initial', Boolean(initKey && keyId === initKey && typedLen === 0))
     el.classList.toggle('hint-final', Boolean(finalKey && keyId === finalKey && typedLen === 1))
   })
@@ -810,6 +828,15 @@ function handleKey(key) {
   ensureSession()
   const code = currentCode()
   if (!code) return
+
+  if (target.kind === 'punct') {
+    if (key.length !== 1) return
+    noteActivity()
+    state.keystrokes += 1
+    if (key === code) onCorrectSyllable()
+    else onWrongKey(key)
+    return
+  }
 
   const lower = key.toLowerCase()
   if (!/^[a-z;]$/.test(lower)) return
@@ -1008,6 +1035,29 @@ function renderSettingsDrawer() {
             <span>正确时朗读</span>
           </label>
           <label class="opt-row">
+            <input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} />
+            <span>点击句子时朗读（口语）</span>
+          </label>
+          <div class="opt-block">
+            <p class="drawer-lead" style="margin-bottom:0.5rem">口语长度 — <strong>时间</strong>与<strong>字数</strong>二选一</p>
+            <label class="opt-row">
+              <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
+              <span>最长分钟</span>
+            </label>
+            <label class="opt-row stacked">
+              <span>分钟</span>
+              <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+            </label>
+            <label class="opt-row">
+              <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
+              <span>最多字数</span>
+            </label>
+            <label class="opt-row stacked">
+              <span>字数</span>
+              <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+            </label>
+          </div>
+          <label class="opt-row">
             <input type="checkbox" id="set-auto-advance" ${settings.autoAdvancePerfect ? 'checked' : ''} />
             <span>全对时自动下一篇</span>
           </label>
@@ -1064,9 +1114,11 @@ function renderStats() {
 
 function renderKeyboard() {
   const layout = getLayout(settings.scheme)
+  const t = currentTarget()
   const code = currentCode()
-  const initKey = settings.showHints && code && !state.sessionFinished ? code[0] : ''
-  const finalKey = settings.showHints && code && !state.sessionFinished ? code[1] : ''
+  const punctKey = t?.kind === 'punct' && settings.showHints && !state.sessionFinished ? code : ''
+  const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
+  const finalKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
 
   const rows = layout
@@ -1093,6 +1145,21 @@ function renderKeyboard() {
     )
     .join('')
 
+  const punctRow = `
+    <div class="kb-row kb-row-punct">
+      ${PUNCT_KEYS.map((k) => {
+        const classes = ['key', 'key-punct']
+        if (punctKey && k === punctKey) classes.push('hint')
+        return `
+          <div class="${classes.join(' ')}" data-key="${k}">
+            <span class="k-init"></span>
+            <span class="k-main">${k}</span>
+            <span class="k-final"></span>
+          </div>`
+      }).join('')}
+    </div>
+  `
+
   return `
     <div class="keyboard-wrap">
       <button type="button" class="keyboard-toggle" id="kb-toggle">
@@ -1104,6 +1171,7 @@ function renderKeyboard() {
       </div>
       <div class="keyboard ${settings.keyboardCovered ? 'covered' : ''}" id="keyboard">
         ${rows}
+        ${punctRow}
       </div>
     </div>
   `
@@ -1263,11 +1331,10 @@ function render() {
 
   app.innerHTML = `
     <header class="topbar">
-      <div class="brand">
-        <h1>双拼练习</h1>
+      <div class="brand brand-modes">
+        <nav class="mode-tabs" aria-label="练习模式">${modeButtons}</nav>
         <span class="scheme">${getSchemeLabel(settings.scheme)}</span>
       </div>
-      <nav class="mode-tabs" aria-label="练习模式">${modeButtons}</nav>
       <div class="top-actions">
         <button type="button" class="ghost-chip" id="btn-open-mistakes">错字本${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
         <button type="button" class="ghost-chip" id="btn-open-settings">设置</button>
@@ -1475,6 +1542,22 @@ function bindEvents() {
   document.querySelector('#set-speak')?.addEventListener('change', (e) => {
     applySettingsPatch({ speakOnCorrect: e.target.checked })
   })
+  document.querySelector('#set-speak-sentence')?.addEventListener('change', (e) => {
+    applySettingsPatch({ speakOnSentenceClick: e.target.checked })
+  })
+  document.querySelectorAll('input[name="speak-limit-mode"]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        applySettingsPatch({ speakLimitMode: e.target.value === 'count' ? 'count' : 'time' })
+      }
+    })
+  })
+  document.querySelector('#set-speak-minutes')?.addEventListener('change', (e) => {
+    applySettingsPatch({ speakMaxMinutes: Number(e.target.value) || 5 })
+  })
+  document.querySelector('#set-speak-count')?.addEventListener('change', (e) => {
+    applySettingsPatch({ speakMaxCount: Number(e.target.value) || 200 })
+  })
   document.querySelector('#set-auto-advance')?.addEventListener('change', (e) => {
     applySettingsPatch({ autoAdvancePerfect: e.target.checked })
   })
@@ -1545,7 +1628,7 @@ export function bootShuangpin(root) {
       speakCurrent()
       return
     }
-    if (e.key.length === 1 && /^[a-zA-Z;]$/.test(e.key)) {
+    if (e.key.length === 1 && /^[a-zA-Z;.,!?:'"/\-]$/.test(e.key)) {
       e.preventDefault()
       handleKey(e.key)
     }
