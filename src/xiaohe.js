@@ -176,11 +176,7 @@ function normalizeFinal(initial, final) {
     // uan / un stay — same FINAL_KEYS as üan / ün
   }
   if (initial === 'y' && f === '') f = 'i' // y alone shouldn't happen
-  // yi is y + i; ye is y + ie? Actually ye = y + e in some schemes but pinyin ye = ye
-  // Standard: ye → final is e? No — ye is y + ê written "e", Xiaohe ye → yp (ie)
-  // Pinyin "ye" = y + e (ê). In Xiaohe, ye is encoded as yp (using ie's key)!
-  // Actually checking: 也 ye → yp in Xiaohe. Yes, special: ye → ie key.
-  if (initial === 'y' && f === 'e') f = 'ie'
+  // ye keeps final e → ye (E key). Do not remap to ie/p; jie/xie stay on p.
   // yuan etc already fine
   // ju → jv already handled
   // n/l + ü: nv, lv written as nv/lv or nü/lü
@@ -247,7 +243,9 @@ export function selfTest() {
     ['yue', 'yt'],
     ['yuan', 'yr'],
     ['yun', 'yy'],
-    ['ye', 'yp'],
+    ['ye', 'ye'],
+    ['jie', 'jp'],
+    ['xie', 'xp'],
     ['ying', 'yk'],
     ['yin', 'yb'],
     ['wu', 'wu'],
