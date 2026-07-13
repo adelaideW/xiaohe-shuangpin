@@ -16,6 +16,7 @@ const STORAGE_KEY = 'japanese-settings'
  * @property {boolean} keyboardCovered
  * @property {boolean} speakOnCorrect
  * @property {boolean} speakOnSentenceClick
+ * @property {boolean} speakShowHiragana
  * @property {SpeakLimitMode} speakLimitMode
  * @property {number} speakMaxMinutes
  * @property {number} speakMaxCount
@@ -33,6 +34,7 @@ export const DEFAULT_JAPANESE_SETTINGS = {
   keyboardCovered: false,
   speakOnCorrect: false,
   speakOnSentenceClick: true,
+  speakShowHiragana: false,
   ...DEFAULT_SPEAK_LIMIT,
   speakMaxCount: 200,
   autoAdvancePerfect: true,
@@ -53,6 +55,7 @@ export function loadJapaneseSettings() {
     base.charsPerPage = Math.max(10, Math.min(120, Number(base.charsPerPage) || 40))
     base.durationMinutes = Math.max(1, Math.min(60, Number(base.durationMinutes) || 5))
     Object.assign(base, normalizeSpeakLimitSettings(base, 'ja'))
+    base.speakShowHiragana = Boolean(base.speakShowHiragana)
     // One-time: show keyboard by default for Japanese (hiragana labels)
     if (!localStorage.getItem('japanese-mig-kb-shown')) {
       base.keyboardCovered = false

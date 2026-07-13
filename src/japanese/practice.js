@@ -857,21 +857,24 @@ export function bootJapanese(root) {
             <label class="opt-row"><input type="checkbox" id="set-cover" ${settings.keyboardCovered ? 'checked' : ''} /><span>キーボードを隠す</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak" ${settings.speakOnCorrect ? 'checked' : ''} /><span>正解で読み上げ</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} /><span>文をクリックしたとき読み上げ（スピーキング）</span></label>
+            <label class="opt-row"><input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} /><span>スピーキングで漢字にひらがなを表示</span></label>
             <div class="opt-block">
               <p class="drawer-lead" style="margin-bottom:0.5rem">スピーキング長さ — <strong>時間</strong>か<strong>文字数</strong>のどちらか</p>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
                 <span>最大分数</span>
               </label>
-              <label class="field-row"><span>分</span>
+              <label class="field-row field-row-unit">
                 <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+                <span class="unit">分</span>
               </label>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
                 <span>最大文字数</span>
               </label>
-              <label class="field-row"><span>文字</span>
+              <label class="field-row field-row-unit">
                 <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+                <span class="unit">文字</span>
               </label>
             </div>
             <label class="opt-row"><input type="checkbox" id="set-auto-advance" ${settings.autoAdvancePerfect ? 'checked' : ''} /><span>全正解で次へ</span></label>
@@ -1106,6 +1109,9 @@ export function bootJapanese(root) {
     )
     document.querySelector('#set-speak-sentence')?.addEventListener('change', (e) =>
       applySettingsPatch({ speakOnSentenceClick: e.target.checked }),
+    )
+    document.querySelector('#set-speak-hiragana')?.addEventListener('change', (e) =>
+      applySettingsPatch({ speakShowHiragana: e.target.checked }),
     )
     document.querySelectorAll('input[name="speak-limit-mode"]').forEach((el) =>
       el.addEventListener('change', (e) => {

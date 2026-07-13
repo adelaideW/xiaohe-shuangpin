@@ -999,17 +999,17 @@ export function bootEnglish(root) {
                 <input type="radio" name="speak-limit-mode" id="set-speak-mode-time" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
                 <span>Max minutes</span>
               </label>
-              <label class="field-row">
-                <span>Minutes</span>
+              <label class="field-row field-row-unit">
                 <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+                <span class="unit">min</span>
               </label>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" id="set-speak-mode-count" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
                 <span>Max words</span>
               </label>
-              <label class="field-row">
-                <span>Words</span>
+              <label class="field-row field-row-unit">
                 <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+                <span class="unit">words</span>
               </label>
             </div>
             <label class="opt-row">

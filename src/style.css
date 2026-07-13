@@ -1162,6 +1162,35 @@ body::before {
   font-family: var(--font-mono);
 }
 
+.field-row,
+.field-row-unit {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0 0.55rem 1.6rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.field-row-unit input[type='number'] {
+  width: 4.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.35rem 0.45rem;
+  font-family: var(--font-mono);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.field-row-unit input[type='number']:disabled {
+  opacity: 0.5;
+}
+
+.field-row-unit .unit {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .mistake-list {
   list-style: none;
   margin: 0;
@@ -1704,6 +1733,21 @@ body::before {
   box-shadow: inset 0 -2px 0 rgba(247, 129, 102, 0.55);
 }
 
+.spk-article.has-furigana {
+  line-height: 2.05;
+}
+
+.spk-article ruby {
+  ruby-align: center;
+}
+
+.spk-article rt {
+  font-size: 0.55em;
+  line-height: 1.1;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .spk-listen {
   display: flex;
   flex-wrap: wrap;
@@ -1818,8 +1862,13 @@ body::before {
 }
 
 .spk-mic.is-listening .spk-mic-icon {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 16px;
+  height: 16px;
+}
+
+.spk-stop-icon {
+  width: 16px;
+  height: 16px;
 }
 
 @keyframes spk-pulse {

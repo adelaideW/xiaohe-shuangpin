@@ -17,9 +17,10 @@ import {
 import { loadEnglishSettings, saveEnglishSettings } from '../english/settings.js'
 import { loadJapaneseSettings, saveJapaneseSettings } from '../japanese/settings.js'
 import { loadSettings, saveSettings } from '../settings.js'
+import { toFuriganaHtml } from './furigana.js'
 
 const ICON_RECORD = `<svg class="spk-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11.25a6.5 6.5 0 0 0 13 0"/><path d="M12 17.75V21"/><path d="M9.25 21h5.5"/></svg>`
-const ICON_STOP = `<svg class="spk-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.75" fill="currentColor"/></svg>`
+const ICON_STOP = `<svg class="spk-mic-icon spk-stop-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" fill="currentColor"/></svg>`
 
 function escapeHtml(s) {
   return String(s)
@@ -125,6 +126,9 @@ export function bootSpeaking(root, opts) {
 
   const sentences = () => paragraphSentences().flat()
 
+  /** @type {Map<string, string>} */
+  const furiganaCache = new Map()
+
   let recognizer = createSpeechRecognizer(language, {
     onUpdate: ({ transcript, listening, error }) => {
       state.transcript = transcript
@@ -190,6 +194,7 @@ export function bootSpeaking(root, opts) {
     state.manualText = ''
     state.gradeError = ''
     state.transcript = ''
+    furiganaCache.clear()
     recognizer.reset()
     render()
   }
@@ -328,7 +333,7 @@ export function bootSpeaking(root, opts) {
     `
   }
 
-  function articleHtml() {
+  function articleHtmlSync() {
     let counter = -1
     const blocks = paragraphSentences()
       .map((sents) => {
@@ -343,6 +348,41 @@ export function bootSpeaking(root, opts) {
       })
       .join('')
     return blocks
+  }
+
+  /**
+   * @param {string} s
+   */
+  async function sentenceDisplayHtml(s) {
+    if (language !== 'ja' || !settings.speakShowHiragana) return escapeHtml(s)
+    if (furiganaCache.has(s)) return furiganaCache.get(s) || escapeHtml(s)
+    try {
+      const html = await toFuriganaHtml(s)
+      const out = html || escapeHtml(s)
+      furiganaCache.set(s, out)
+      return out
+    } catch {
+      return escapeHtml(s)
+    }
+  }
+
+  async function articleHtml() {
+    if (language !== 'ja' || !settings.speakShowHiragana) return articleHtmlSync()
+    let counter = -1
+    const blocks = []
+    for (const sents of paragraphSentences()) {
+      const spans = []
+      for (const s of sents) {
+        counter += 1
+        const i = counter
+        const inner = await sentenceDisplayHtml(s)
+        spans.push(
+          `<span class="spk-sent ${i === state.index ? 'is-active' : ''}" data-sent="${i}">${inner} </span>`,
+        )
+      }
+      blocks.push(`<p>${spans.join('')}</p>`)
+    }
+    return blocks.join('')
   }
 
   function feedbackHtml() {
@@ -393,14 +433,14 @@ export function bootSpeaking(root, opts) {
     `
   }
 
-  function render() {
+  async function render() {
     const sents = sentences()
-    const current = currentSentence()
     const gradedCount = state.results.filter(Boolean).length
     const avg = gradedCount
       ? state.results.reduce((sum, r) => sum + (r ? r.rating : 0), 0) / gradedCount
       : 0
     const ttsOk = 'speechSynthesis' in window
+    const articleBody = await articleHtml()
 
     root.innerHTML = `
       <div class="speaking-app">
@@ -423,7 +463,7 @@ export function bootSpeaking(root, opts) {
         </header>
 
         <section class="practice-card spk-card">
-          <div class="spk-article" lang="${language}">${articleHtml()}</div>
+          <div class="spk-article${language === 'ja' && settings.speakShowHiragana ? ' has-furigana' : ''}" lang="${language}">${articleBody}</div>
           <div class="spk-listen">${listenControlsHtml()}</div>
 
           <div class="spk-practice">
@@ -443,9 +483,7 @@ export function bootSpeaking(root, opts) {
                       }">🔊</button>`
                     : ''
                 }
-                <span class="spk-counter">${
-                  t('Line', '行', '句')
-                } ${state.index + 1} / ${sents.length}</span>
+                <span class="spk-counter">${state.index + 1} / ${sents.length} ${t('Line', '行', '句')}</span>
               </div>
             </div>
 
@@ -545,6 +583,14 @@ export function bootSpeaking(root, opts) {
                 )
               }</span>
             </label>
+            ${
+              language === 'ja'
+                ? `<label class="opt-row">
+              <input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} />
+              <span>漢字にひらがなを表示</span>
+            </label>`
+                : ''
+            }
           </section>
           <section class="drawer-section">
             <h3>${t('Lesson length', 'レッスン長さ', '课文长度')}</h3>
@@ -559,9 +605,9 @@ export function bootSpeaking(root, opts) {
               <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
               <span>${t('Max minutes', '最大分数', '最长分钟')}</span>
             </label>
-            <label class="opt-row stacked">
-              <span>${t('Minutes', '分', '分钟')}</span>
+            <label class="field-row field-row-unit">
               <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <span class="unit">${t('min', '分', '分钟')}</span>
             </label>
             <label class="opt-row">
               <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
@@ -571,9 +617,9 @@ export function bootSpeaking(root, opts) {
                   : t('Max characters', '最大文字数', '最多字数')
               }</span>
             </label>
-            <label class="opt-row stacked">
-              <span>${language === 'en' ? 'Words' : t('Characters', '文字', '字数')}</span>
+            <label class="field-row field-row-unit">
               <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
             </label>
             <p class="drawer-lead">${t('Applies on Next lesson.', '「次のレッスン」で反映されます。', '点「下一篇」后生效。')}</p>
           </section>
@@ -623,6 +669,11 @@ export function bootSpeaking(root, opts) {
     )
     root.querySelector('#set-speak-sentence')?.addEventListener('change', (e) => {
       applySpeakSetting(e.target.checked)
+    })
+    root.querySelector('#set-speak-hiragana')?.addEventListener('change', (e) => {
+      settings = saveJapaneseSettings({ speakShowHiragana: e.target.checked })
+      furiganaCache.clear()
+      render()
     })
     root.querySelectorAll('input[name="speak-limit-mode"]').forEach((el) => {
       el.addEventListener('change', (e) => {

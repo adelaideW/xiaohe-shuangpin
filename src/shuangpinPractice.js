@@ -1066,17 +1066,17 @@ function renderSettingsDrawer() {
               <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
               <span>最长分钟</span>
             </label>
-            <label class="opt-row stacked">
-              <span>分钟</span>
+            <label class="field-row field-row-unit">
               <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <span class="unit">分钟</span>
             </label>
             <label class="opt-row">
               <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
               <span>最多字数</span>
             </label>
-            <label class="opt-row stacked">
-              <span>字数</span>
+            <label class="field-row field-row-unit">
               <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <span class="unit">字</span>
             </label>
           </div>
           <label class="opt-row">
