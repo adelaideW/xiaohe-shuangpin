@@ -1657,8 +1657,8 @@ body::before {
 }
 
 .jp-passage.has-furigana {
-  line-height: 2.85;
-  padding-top: 0.35rem;
+  line-height: 3.05;
+  padding-top: 0.45rem;
 }
 
 .word-display.jp-word {
@@ -1667,8 +1667,8 @@ body::before {
 }
 
 .word-display.jp-word.has-furigana {
-  line-height: 1.55;
-  padding-top: 0.55em;
+  line-height: 1.7;
+  padding-top: 0.7em;
 }
 
 .jp-passage ruby,
@@ -1684,8 +1684,8 @@ body::before {
   color: var(--muted);
   font-weight: 500;
   /* Extra air between furigana and kanji so the typing highlight doesn’t cover readings */
-  padding-bottom: 0.28em;
-  margin-bottom: 0.12em;
+  padding-bottom: 0.45em;
+  margin-bottom: 0.2em;
 }
 
 .jp-seg {
@@ -1711,8 +1711,8 @@ body::before {
   background: linear-gradient(
     to bottom,
     transparent 0,
-    transparent 0.55em,
-    var(--jade-soft) 0.55em,
+    transparent 0.75em,
+    var(--jade-soft) 0.75em,
     var(--jade-soft) 100%
   );
 }
