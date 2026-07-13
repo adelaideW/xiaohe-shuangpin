@@ -245,7 +245,7 @@ export function countJapaneseUnits(passage) {
 }
 
 /**
- * Fit a typing passage into [minChars, maxChars] by growing (append extras) then trimming.
+ * Fit a typing passage into [minChars, maxChars] by growing (cycle extras) then trimming.
  * @param {JpPassage} passage
  * @param {number} minChars
  * @param {number} maxChars
@@ -257,15 +257,17 @@ export function fitJapanesePassage(passage, minChars, maxChars, extraPassages = 
   let max = Math.max(1, Math.floor(Number(maxChars) || min))
   if (min > max) min = max
 
+  /** @type {JpPassage[]} */
+  const pool = [passage, ...extraPassages].filter((p) => p?.segments?.length)
+  if (!pool.length) {
+    return { title: passage?.title || '文章', segments: [] }
+  }
+
   /** @type {JpSegment[]} */
   let segments = [...(passage?.segments || [])]
-  const usedTitles = new Set([passage?.title])
 
-  for (const extra of extraPassages) {
-    if (countJapaneseChars({ segments }) >= min) break
-    if (!extra?.segments?.length) continue
-    if (usedTitles.has(extra.title)) continue
-    usedTitles.add(extra.title)
+  const appendPassage = (extra) => {
+    if (!extra?.segments?.length) return
     if (segments.length) {
       const last = segments[segments.length - 1]
       if (last?.surface && !/[。！？\n]$/.test(last.surface)) {
@@ -273,6 +275,17 @@ export function fitJapanesePassage(passage, minChars, maxChars, extraPassages = 
       }
     }
     segments = segments.concat(extra.segments)
+  }
+
+  // Append from pool in a cycle until min is met (bank alone may be under min).
+  const extrasFirst = pool.filter((p) => p !== passage)
+  const cycle = extrasFirst.length ? [...extrasFirst, passage] : pool
+  let guard = 0
+  let idx = 0
+  while (countJapaneseChars({ segments }) < min && guard < 40) {
+    appendPassage(cycle[idx % cycle.length])
+    idx += 1
+    guard += 1
   }
 
   while (segments.length > 1 && countJapaneseChars({ segments }) > max) {

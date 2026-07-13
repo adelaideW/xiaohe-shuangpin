@@ -31,6 +31,7 @@ import { extractFromFile } from '../upload.js'
 import { punctTypingKey } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
+import { FALLBACK_LESSONS } from '../speaking/lessons.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -318,7 +319,8 @@ export function bootJapanese(root) {
     return { min: Math.min(min, max), max: Math.max(min, max) }
   }
 
-  function allArticleSources() {
+  /** Typed bank with readings (preferred). */
+  function typedArticleSources() {
     const user = loadJapaneseLibrary()
       .map((d) => {
         try {
@@ -331,20 +333,85 @@ export function bootJapanese(root) {
     return [...JP_ARTICLES, ...user]
   }
 
+  /** Speaking lesson text as secondary bulk fillers (kanji may lack readings). */
+  function speakingFillerSources() {
+    return (FALLBACK_LESSONS.ja || [])
+      .map((lesson) => {
+        try {
+          return passageFromJapaneseText(lesson.title, lesson.article)
+        } catch {
+          return null
+        }
+      })
+      .filter(Boolean)
+  }
+
   function pickFittedArticle(avoid) {
     const { min, max } = articleLengthBounds()
-    const sources = allArticleSources()
+    const typed = typedArticleSources()
+    const speaking = speakingFillerSources()
+    const sources = [...typed, ...speaking]
     if (!sources.length) return null
 
-    const longEnough = sources.filter((p) => countJapaneseChars(p) >= min)
-    const basePool = longEnough.length ? longEnough : sources
+    // Prefer a typed base that already meets min when possible.
+    const typedLongEnough = typed.filter((p) => countJapaneseChars(p) >= min)
+    const basePool = typedLongEnough.length ? typedLongEnough : typed.length ? typed : sources
     const base = shufflePick(basePool, avoid)
     if (!base) return null
 
-    const fillers = sources
-      .filter((p) => p !== base)
-      .sort(() => Math.random() - 0.5)
+    // Typed fillers first, then speaking bulk, then allow cycling via fitJapanesePassage.
+    const fillers = [
+      ...typed.filter((p) => p !== base).sort(() => Math.random() - 0.5),
+      ...speaking.filter((p) => p !== base).sort(() => Math.random() - 0.5),
+    ]
     return fitJapanesePassage(base, min, max, fillers)
+  }
+
+  /**
+   * Article progress in 文字 (same metric as Article length settings).
+   * @returns {{ done: number, total: number, label: string }}
+   */
+  function articleCharProgress() {
+    const segs = state.passage?.segments || []
+    const total = countJapaneseChars(state.passage)
+    const doneIndexes = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
+    let done = 0
+    segs.forEach((seg, i) => {
+      if (!doneIndexes.has(i)) return
+      done += countJapaneseChars(seg.surface || '')
+    })
+    const err = state.passageWrong ? ` · 誤 ${state.passageWrong}` : ''
+    return { done, total, label: `${done}/${total} 文字${err}` }
+  }
+
+  function passageProgressLabel() {
+    if (state.mode === 'article') return articleCharProgress().label
+    return `${state.unitIndex}/${state.units.length}${
+      state.passageWrong ? ` · 誤 ${state.passageWrong}` : ''
+    }`
+  }
+
+  function refitCurrentArticle() {
+    if (state.mode !== 'article' || !state.passage) return false
+    const { min, max } = articleLengthBounds()
+    const typed = typedArticleSources()
+    const speaking = speakingFillerSources()
+    const base =
+      typed.find((p) => p.title === state.passage.title) ||
+      typed[0] ||
+      speaking.find((p) => p.title === state.passage.title) ||
+      speaking[0]
+    if (!base) return false
+    const fillers = [
+      ...typed.filter((p) => p !== base),
+      ...speaking.filter((p) => p !== base),
+    ].sort(() => Math.random() - 0.5)
+    const fitted = fitJapanesePassage(base, min, max, fillers)
+    if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
+      state.passageHistory[state.historyIndex] = fitted
+    }
+    loadPassageAt(fitted)
+    return true
   }
 
   function pickPassage(mode) {
@@ -479,14 +546,19 @@ export function bootJapanese(root) {
       return
     }
 
+    const lengthChanged =
+      'speakLimitMode' in patch ||
+      'speakMaxMinutes' in patch ||
+      'speakMinMinutes' in patch ||
+      'speakMaxCount' in patch ||
+      'speakMinCount' in patch
+
+    if (lengthChanged && state.mode === 'article') {
+      refitCurrentArticle()
+    }
+
     if (state.drawer === 'settings') {
-      if (
-        'speakLimitMode' in patch ||
-        'speakMaxMinutes' in patch ||
-        'speakMinMinutes' in patch ||
-        'speakMaxCount' in patch ||
-        'speakMinCount' in patch
-      ) {
+      if (lengthChanged) {
         render()
       } else if ('timerMode' in patch) {
         renderTimerControls()
@@ -659,9 +731,7 @@ export function bootJapanese(root) {
     })
     const metaProg = document.querySelector('.passage-progress')
     if (metaProg) {
-      metaProg.textContent = `${state.unitIndex}/${state.units.length}${
-        state.passageWrong ? ` · 誤 ${state.passageWrong}` : ''
-      }`
+      metaProg.textContent = passageProgressLabel()
     }
     const hint = document.querySelector('.pinyin-line')
     if (hint && cur) {
@@ -848,7 +918,7 @@ export function bootJapanese(root) {
       .join('')
 
     const multiPage = state.pages.length > 1
-    const progress = `${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 誤 ${state.passageWrong}` : ''}`
+    const progress = passageProgressLabel()
     const canPrev = state.historyIndex > 0
     const hira = cur ? hintHiragana(cur.kana) : ''
 
