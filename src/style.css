@@ -1181,3 +1181,50 @@ body::before {
     justify-content: flex-end;
   }
 }
+
+.english-passage .ch-space {
+  color: var(--muted);
+  opacity: 0.45;
+}
+
+.english-passage .ch.current.ch-space {
+  opacity: 1;
+  color: var(--jade-deep);
+}
+
+.track-switch {
+  display: inline-flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.track-switch button {
+  height: 1.85rem;
+  padding: 0 0.85rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.track-switch button:hover:not(.active) {
+  color: var(--ink);
+  background: var(--btn-hover-bg);
+}
+
+.track-switch button.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.keyboard .key-wide {
+  width: clamp(8rem, 28vw, 14rem);
+}
