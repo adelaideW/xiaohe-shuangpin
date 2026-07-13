@@ -3,7 +3,7 @@
  * Ported from daily-language-practice into the typing app shell.
  */
 
-import { gradeRepeat } from './grade.js'
+import { gradeRepeat, buildSpeakDiff } from './grade.js'
 import { pickLesson } from './lessons.js'
 import { fitLessonToSpeakLimit } from './length.js'
 import {
@@ -404,22 +404,86 @@ export function bootSpeaking(root, opts) {
     return blocks.join('')
   }
 
+  /**
+   * @param {import('./grade.js').DiffOp[] | undefined} ops
+   * @param {'original' | 'heard'} side
+   */
+  function renderDiffLine(ops, side) {
+    if (!ops?.length) return ''
+    const gap = language === 'en' ? ' ' : ''
+    const html = ops
+      .map((op) => {
+        if (side === 'original') {
+          if (op.type === 'extra') return ''
+          const tok = escapeHtml(op.original || '')
+          if (op.type === 'match') return `<span class="spk-mark ok">${tok}</span>`
+          if (op.type === 'miss') return `<mark class="spk-mark miss" title="${t('Missing', '抜け', '遗漏')}">${tok}</mark>`
+          if (op.type === 'change')
+            return `<mark class="spk-mark change" title="${t('Changed', '違い', '不同')}">${tok}</mark>`
+          return tok
+        }
+        if (op.type === 'miss') return ''
+        const tok = escapeHtml(op.said || '')
+        if (op.type === 'match') return `<span class="spk-mark ok">${tok}</span>`
+        if (op.type === 'extra')
+          return `<mark class="spk-mark extra" title="${t('Extra', '余分', '多说')}">${tok}</mark>`
+        if (op.type === 'change')
+          return `<mark class="spk-mark change" title="${t('Changed', '違い', '不同')}">${tok}</mark>`
+        return tok
+      })
+      .filter(Boolean)
+      .join(gap)
+    return html || `<span class="spk-mark muted">—</span>`
+  }
+
   function feedbackHtml() {
     const fb = state.results[state.index]
     if (!fb) {
       return `<div class="spk-feedback-slot" aria-hidden="true"></div>`
     }
+    const original = fb.original || fb.sentence || currentSentence()
+    const heard = fb.transcript || ''
+    const diff =
+      fb.diff ||
+      (original && heard ? buildSpeakDiff(original, heard, language) : [])
+    const hasMistakes = diff.some((op) => op.type !== 'match')
+
     return `
       <div class="spk-feedback-slot">
         <div class="spk-feedback">
           <div class="spk-rating" aria-label="${fb.rating}/5">${ratingDots(fb.rating)} <span>${fb.rating}/5</span></div>
           <p class="spk-summary">${escapeHtml(fb.summary)}</p>
+          <p class="spk-section-label">${t(
+            'Compare original & heard',
+            '原文と認識結果の比較',
+            '原文与识别对比',
+          )}</p>
+          <div class="spk-diff" lang="${language}">
+            <div class="spk-diff-row">
+              <span class="spk-diff-label">${t('Original', '原文', '原文')}</span>
+              <p class="spk-diff-line">${renderDiffLine(diff, 'original')}</p>
+            </div>
+            <div class="spk-diff-row">
+              <span class="spk-diff-label">${t('Heard', '認識', '识别')}</span>
+              <p class="spk-diff-line">${renderDiffLine(diff, 'heard')}</p>
+            </div>
+            <p class="spk-diff-legend">
+              <span><mark class="spk-mark miss"> </mark> ${t('Missing', '抜け', '遗漏')}</span>
+              <span><mark class="spk-mark change"> </mark> ${t('Changed', '違い', '不同')}</span>
+              <span><mark class="spk-mark extra"> </mark> ${t('Extra', '余分', '多说')}</span>
+            </p>
+            ${
+              !hasMistakes
+                ? `<p class="spk-diff-ok">${t(
+                    'No mismatches spotted in the transcript.',
+                    '認識上の食い違いは見つかりませんでした。',
+                    '识别结果与原文基本一致。',
+                  )}</p>`
+                : ''
+            }
+          </div>
           <p class="spk-section-label">${t('What to improve', '改善ポイント', '改进建议')}</p>
           <ul class="spk-improve">${(fb.improvements || []).map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
-          <details class="spk-heard">
-            <summary>${t('What we heard', '認識された内容', '识别结果')}</summary>
-            <p>${escapeHtml(fb.transcript || '')}</p>
-          </details>
         </div>
       </div>
     `
@@ -492,6 +556,7 @@ export function bootSpeaking(root, opts) {
             </div>
 
             <aside class="spk-side">
+              <div class="spk-side-body">
               <div class="spk-listen">${listenControlsHtml()}</div>
 
               <div class="spk-practice">
@@ -560,17 +625,6 @@ export function bootSpeaking(root, opts) {
                 ${state.gradeError ? `<p class="error-text">${escapeHtml(state.gradeError)}</p>` : ''}
                 ${feedbackHtml()}
 
-                <div class="spk-nav">
-                  <button type="button" class="ghost-chip" id="spk-prev" ${state.index === 0 ? 'disabled' : ''}>
-                    ← ${t('Previous', '前の行', '上一句')}
-                  </button>
-                  <button type="button" class="ghost-chip" id="spk-next-line" ${
-                    state.index >= sents.length - 1 ? 'disabled' : ''
-                  }>
-                    ${t('Next line', '次の行', '下一句')} →
-                  </button>
-                </div>
-
                 ${
                   gradedCount
                     ? `<p class="spk-avg">${
@@ -578,6 +632,17 @@ export function bootSpeaking(root, opts) {
                       }: ${avg.toFixed(1)}/5 · ${gradedCount}/${sents.length}</p>`
                     : ''
                 }
+              </div>
+              </div>
+              <div class="spk-nav">
+                <button type="button" class="ghost-chip" id="spk-prev" ${state.index === 0 ? 'disabled' : ''}>
+                  ← ${t('Previous', '前の行', '上一句')}
+                </button>
+                <button type="button" class="ghost-chip" id="spk-next-line" ${
+                  state.index >= sents.length - 1 ? 'disabled' : ''
+                }>
+                  ${t('Next line', '次の行', '下一句')} →
+                </button>
               </div>
             </aside>
           </div>
@@ -701,7 +766,7 @@ export function bootSpeaking(root, opts) {
       return
     }
     // Fixed paired height ≈ controls + reserved feedback so the card does not jump
-    const FIXED = 800
+    const FIXED = 680
     pane.style.height = `${FIXED}px`
     pane.style.maxHeight = `${FIXED}px`
     side.style.height = `${FIXED}px`

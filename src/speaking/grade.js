@@ -3,6 +3,10 @@
 /** @typedef {'en' | 'ja' | 'zh'} SpeakLang */
 
 /**
+ * @typedef {{ type: 'match' | 'miss' | 'extra' | 'change', original?: string, said?: string }} DiffOp
+ */
+
+/**
  * @param {string} text
  * @param {SpeakLang} language
  */
@@ -36,6 +40,64 @@ export function lcsLength(a, b) {
 }
 
 /**
+ * Align original vs heard tokens (edit script) for mistake highlighting.
+ * @param {string[]} originalTokens
+ * @param {string[]} saidTokens
+ * @returns {DiffOp[]}
+ */
+export function alignSpeakTokens(originalTokens, saidTokens) {
+  const a = originalTokens
+  const b = saidTokens
+  const n = a.length
+  const m = b.length
+  /** @type {number[][]} */
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
+  for (let i = 0; i <= n; i++) dp[i][0] = i
+  for (let j = 0; j <= m; j++) dp[0][j] = j
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+    }
+  }
+
+  /** @type {DiffOp[]} */
+  const ops = []
+  let i = n
+  let j = m
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && a[i - 1] === b[j - 1] && dp[i][j] === dp[i - 1][j - 1]) {
+      ops.push({ type: 'match', original: a[i - 1], said: b[j - 1] })
+      i -= 1
+      j -= 1
+    } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
+      ops.push({ type: 'change', original: a[i - 1], said: b[j - 1] })
+      i -= 1
+      j -= 1
+    } else if (j > 0 && (i === 0 || dp[i][j] === dp[i][j - 1] + 1)) {
+      ops.push({ type: 'extra', said: b[j - 1] })
+      j -= 1
+    } else if (i > 0) {
+      ops.push({ type: 'miss', original: a[i - 1] })
+      i -= 1
+    } else {
+      break
+    }
+  }
+  return ops.reverse()
+}
+
+/**
+ * @param {string} original
+ * @param {string} transcript
+ * @param {SpeakLang} language
+ * @returns {DiffOp[]}
+ */
+export function buildSpeakDiff(original, transcript, language) {
+  return alignSpeakTokens(tokenize(original, language), tokenize(transcript, language))
+}
+
+/**
  * @param {string} original
  * @param {string} transcript
  * @param {SpeakLang} language
@@ -43,6 +105,7 @@ export function lcsLength(a, b) {
 export function algorithmicGrade(original, transcript, language) {
   const origTokens = tokenize(original, language)
   const saidTokens = tokenize(transcript, language)
+  const diff = alignSpeakTokens(origTokens, saidTokens)
 
   if (!saidTokens.length) {
     const empty = {
@@ -64,6 +127,9 @@ export function algorithmicGrade(original, transcript, language) {
       summary: empty.summary,
       improvements: [empty.tip],
       source: 'heuristic',
+      diff,
+      original,
+      transcript,
     }
   }
 
@@ -164,6 +230,9 @@ export function algorithmicGrade(original, transcript, language) {
     summary: summaries[rating],
     improvements: improvements.slice(0, 4),
     source: 'heuristic',
+    diff,
+    original,
+    transcript,
   }
 }
 
@@ -174,6 +243,7 @@ export function algorithmicGrade(original, transcript, language) {
  * @param {string} transcript
  */
 export async function gradeRepeat(language, original, transcript) {
+  const local = algorithmicGrade(original, transcript, language)
   try {
     const res = await fetch('/api/grade-repeat', {
       method: 'POST',
@@ -182,10 +252,18 @@ export async function gradeRepeat(language, original, transcript) {
     })
     if (res.ok) {
       const data = await res.json()
-      if (data && data.summary) return { ...data, source: 'ai' }
+      if (data && data.summary) {
+        return {
+          ...data,
+          source: 'ai',
+          diff: local.diff,
+          original,
+          transcript,
+        }
+      }
     }
   } catch {
     /* offline / no API */
   }
-  return algorithmicGrade(original, transcript, language)
+  return local
 }
