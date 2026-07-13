@@ -352,11 +352,13 @@ function ensureSession() {
 function onPassageComplete() {
   state.passagesDone += 1
   const clean = state.passageWrong === 0
-  const timed = state.sessionActive && !state.sessionFinished
-  const autoOk = settings.autoAdvancePerfect && clean && timed
+  // Auto-advance on a perfect pass while practicing (timer optional but preferred)
+  const autoOk =
+    settings.autoAdvancePerfect &&
+    clean &&
+    !state.sessionFinished
 
   if (autoOk) {
-    // Skip interstitial banner — load next passage immediately
     clearAdvanceTimer()
     state.completed = false
     state.autoAdvanceNote = ''
@@ -365,7 +367,7 @@ function onPassageComplete() {
   }
 
   state.completed = true
-  state.autoAdvanceNote = clean ? '' : '有错字 · 可继续下一篇'
+  state.autoAdvanceNote = clean ? '' : '有错字 · 点下一篇继续'
   render()
 }
 
@@ -880,13 +882,9 @@ function renderPassageStage() {
       <div class="complete-banner">
         <h2>${state.passageWrong === 0 ? '全部正确！' : '本篇完成'}</h2>
         <p>${state.autoAdvanceNote || `准确率 ${accuracy()}% · ${cpm()} 字/分`}</p>
-        ${
-          state.autoAdvanceNote.includes('下一篇')
-            ? `<p class="advance-hint">即将加载下一篇…</p>`
-            : `<div class="toolbar">
-                <button type="button" class="primary" id="btn-next-passage">下一篇</button>
-              </div>`
-        }
+        <div class="toolbar">
+          <button type="button" class="primary" id="btn-next-passage">下一篇</button>
+        </div>
       </div>
     `
   }
