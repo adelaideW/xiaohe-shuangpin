@@ -24,6 +24,7 @@ import {
   clearEnglishMistakes,
   summarizeEnglishMistakes,
   smartEnglishWordPool,
+  wordAroundIndex,
 } from './mistakes.js'
 import { loadEnglishLibrary, addEnglishDoc, removeEnglishDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
@@ -31,6 +32,7 @@ import { isTypablePunct, punctTypingKey, isTypableSpace } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { FALLBACK_LESSONS } from '../speaking/lessons.js'
+import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -579,10 +581,12 @@ export function bootEnglish(root) {
 
   function onWrongKey(typed) {
     const target = currentTarget()
-    if (target) {
+    if (target && state.passage) {
+      const word = wordAroundIndex(state.passage.text, target.index)
       recordEnglishMistake({
+        word,
         char: target.char === ' ' ? '␣' : target.char,
-        expected: target.char === ' ' ? 'space' : target.char,
+        expected: word,
         typed: typed === ' ' ? 'space' : typed,
         mode: state.mode,
       })
@@ -646,9 +650,11 @@ export function bootEnglish(root) {
   }
 
   function scrollCurrentIntoView() {
-    const el = document.querySelector('.passage .ch.current')
-    if (!el) return
-    el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+    scrollTypingFocusIntoView({
+      unitIndex: state.unitIndex,
+      unitCount: state.units.length,
+      selector: '.passage-scroll .ch.current',
+    })
   }
 
   function patchLive() {
@@ -928,11 +934,11 @@ export function bootEnglish(root) {
 
   function renderMistakesDrawer() {
     const summary = summarizeEnglishMistakes()
-    const top = summary.topChars.length
-      ? summary.topChars
+    const top = summary.topWords.length
+      ? summary.topWords
           .map(
             (c) =>
-              `<li><span class="m-char">${escapeHtml(c.char)}</span> <span class="m-count">${c.count}×</span></li>`,
+              `<li><span class="m-char">${escapeHtml(c.word)}</span> <span class="m-count">${c.count}×</span></li>`,
           )
           .join('')
       : '<li class="empty">No frequent mistakes yet</li>'
@@ -941,8 +947,8 @@ export function bootEnglish(root) {
           .map(
             (m) =>
               `<li>
-                <span class="m-char">${escapeHtml(m.char)}</span>
-                <span class="m-meta">wanted ${escapeHtml(m.expected)} · typed ${escapeHtml(m.typed || '—')}</span>
+                <span class="m-char">${escapeHtml(m.word || m.char)}</span>
+                <span class="m-meta">wanted ${escapeHtml(m.expected || m.word || '')} · typed ${escapeHtml(m.typed || '—')}</span>
                 <span class="m-time">${formatAgo(m.at)}</span>
               </li>`,
           )

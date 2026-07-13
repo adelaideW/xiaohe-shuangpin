@@ -33,6 +33,7 @@ import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { FALLBACK_LESSONS } from '../speaking/lessons.js'
 import { enrichPassageWithReadings } from '../speaking/furigana.js'
+import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -681,9 +682,11 @@ export function bootJapanese(root) {
       state.pageIndex = nextPage
       render()
       focusApp()
+      requestAnimationFrame(scrollCurrentIntoView)
       return
     }
     patchLive()
+    requestAnimationFrame(scrollCurrentIntoView)
   }
 
   function onWrong(typed) {
@@ -821,6 +824,14 @@ export function bootJapanese(root) {
         .join('')
     }
     patchStats()
+  }
+
+  function scrollCurrentIntoView() {
+    scrollTypingFocusIntoView({
+      unitIndex: state.unitIndex,
+      unitCount: state.units.length,
+      selector: '.passage-scroll .jp-seg.current',
+    })
   }
 
   async function handleUploadedFile(file) {

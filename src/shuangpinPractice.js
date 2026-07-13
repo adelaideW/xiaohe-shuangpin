@@ -25,6 +25,7 @@ import { extractFromFile } from './upload.js'
 import { loadUserLibrary, addUserDoc, removeUserDoc } from './userLibrary.js'
 import { punctTypingKey } from './punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
+import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
 
 function escapeHtml(s) {
   return String(s)
@@ -818,9 +819,11 @@ function onCorrectSyllable() {
 }
 
 function scrollCurrentIntoView() {
-  const el = document.querySelector('.passage .ch.current')
-  if (!el) return
-  el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  scrollTypingFocusIntoView({
+    unitIndex: state.unitIndex,
+    unitCount: state.units.length,
+    selector: '.passage-scroll .ch.current',
+  })
 }
 
 function onWrongKey(typed) {

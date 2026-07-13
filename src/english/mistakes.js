@@ -1,5 +1,6 @@
 /**
  * English mistake log — separate from 双拼 (`xiaohe-mistakes`).
+ * Errors are stored by word (not individual characters).
  */
 
 const STORAGE_KEY = 'english-mistakes'
@@ -7,6 +8,7 @@ const MAX_EVENTS = 500
 
 /**
  * @typedef {object} EnglishMistake
+ * @property {string} word
  * @property {string} char
  * @property {string} expected
  * @property {string} typed
@@ -31,10 +33,38 @@ function save(list) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(-MAX_EVENTS)))
 }
 
-/** @param {Omit<EnglishMistake, 'at'>} event */
+/**
+ * Extract the word (letters/digits/apostrophes) around a character index.
+ * Falls back to the single character for spaces/punctuation.
+ * @param {string} text
+ * @param {number} charIndex
+ */
+export function wordAroundIndex(text, charIndex) {
+  const chars = [...String(text || '')]
+  if (!chars.length || charIndex < 0 || charIndex >= chars.length) return ''
+  const ch = chars[charIndex]
+  if (!/[A-Za-z0-9']/.test(ch)) {
+    return ch === ' ' ? '␣' : ch
+  }
+  let start = charIndex
+  let end = charIndex
+  while (start > 0 && /[A-Za-z0-9']/.test(chars[start - 1])) start -= 1
+  while (end < chars.length - 1 && /[A-Za-z0-9']/.test(chars[end + 1])) end += 1
+  return chars.slice(start, end + 1).join('')
+}
+
+/** @param {Omit<EnglishMistake, 'at'> & { word?: string }} event */
 export function recordEnglishMistake(event) {
+  const word = String(event.word || event.expected || event.char || '?').trim() || '?'
   const list = loadEnglishMistakes()
-  list.push({ ...event, at: Date.now() })
+  list.push({
+    word,
+    char: event.char || word,
+    expected: event.expected || word,
+    typed: event.typed || '',
+    mode: event.mode || 'article',
+    at: Date.now(),
+  })
   save(list)
   return list
 }
@@ -45,34 +75,38 @@ export function clearEnglishMistakes() {
 
 export function summarizeEnglishMistakes() {
   const list = loadEnglishMistakes()
-  /** @type {Map<string, { char: string, count: number }>} */
-  const byChar = new Map()
+  /** @type {Map<string, { word: string, count: number }>} */
+  const byWord = new Map()
   for (const m of list) {
-    const key = m.expected || m.char || '?'
-    const prev = byChar.get(key) || { char: key, count: 0 }
+    const key = String(m.word || m.expected || m.char || '?').trim() || '?'
+    const prev = byWord.get(key) || { word: key, count: 0 }
     prev.count += 1
-    byChar.set(key, prev)
+    byWord.set(key, prev)
   }
-  const topChars = [...byChar.values()].sort((a, b) => b.count - a.count).slice(0, 12)
+  const topWords = [...byWord.values()].sort((a, b) => b.count - a.count).slice(0, 12)
   const recent = [...list].reverse().slice(0, 20)
-  return { total: list.length, topChars, recent }
+  return { total: list.length, topWords, recent }
 }
 
 /**
- * Prefer words that contain frequently missed characters.
+ * Prefer words that were mistyped, then base words containing those.
  * @returns {string[]}
  */
 export function smartEnglishWordPool(baseWords, mistakes = loadEnglishMistakes()) {
   if (!mistakes.length) return baseWords
   const counts = new Map()
   for (const m of mistakes) {
-    const c = (m.expected || '').toLowerCase()
-    if (!c || c === ' ') continue
-    counts.set(c, (counts.get(c) || 0) + 1)
+    const w = String(m.word || m.expected || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9']/g, '')
+    if (!w) continue
+    counts.set(w, (counts.get(w) || 0) + 3)
+    for (const ch of w) counts.set(ch, (counts.get(ch) || 0) + 1)
   }
   const scored = baseWords.map((w) => {
-    let score = 1
-    for (const ch of w.toLowerCase()) score += counts.get(ch) || 0
+    const lower = w.toLowerCase()
+    let score = counts.get(lower) || 1
+    for (const ch of lower) score += counts.get(ch) || 0
     return { w, score }
   })
   scored.sort((a, b) => b.score - a.score)
