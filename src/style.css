@@ -1433,7 +1433,9 @@ body::before {
 
 .english-passage .ch-space {
   color: var(--muted);
-  opacity: 0.45;
+  opacity: 0.55;
+  display: inline-block;
+  min-width: 0.35em;
 }
 
 .english-passage .ch.current.ch-space {

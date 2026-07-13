@@ -187,16 +187,17 @@ export function fitEnglishPassage(passage, minWords, maxWords, extraPassages = [
   }
 
   if (countEnglishWords(text) > max) {
-    const words = text.match(/[A-Za-z0-9']+|[^\sA-Za-z0-9']+/g) || []
+    // Keep whitespace and punctuation while cutting at a word boundary
+    const parts = text.match(/[A-Za-z0-9']+|\s+|[^\sA-Za-z0-9']+/g) || []
     let acc = ''
     let count = 0
-    for (const part of words) {
-      const isWord = /[A-Za-z0-9']/.test(part)
+    for (const part of parts) {
+      const isWord = /^[A-Za-z0-9']+$/.test(part)
       if (isWord && count >= max) break
       acc += part
       if (isWord) count += 1
     }
-    text = acc.trim()
+    text = acc.replace(/\s+$/g, '')
   }
 
   return { title: passage?.title || 'Article', text }
