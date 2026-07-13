@@ -1801,6 +1801,15 @@ body::before {
   min-height: 100%;
 }
 
+.skill-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, #f7faf8 92%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
 .skill-lang-head {
   margin: 0.85rem 1.5rem 0.15rem;
 }
@@ -1829,6 +1838,7 @@ body::before {
   padding: 0;
   border-bottom: 1px solid var(--line);
   overflow-x: auto;
+  background: transparent;
 }
 
 .skill-tab {

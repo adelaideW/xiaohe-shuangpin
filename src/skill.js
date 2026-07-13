@@ -71,20 +71,22 @@ export function mountSkillShell(practiceRoot, lang, active) {
 
   practiceRoot.innerHTML = `
     <div class="skill-shell">
-      <header class="skill-lang-head">
-        <h1 class="skill-lang-title">${meta.title}</h1>
-        <p class="skill-lang-sub">${meta.sub}</p>
-      </header>
-      <nav class="skill-tabs" role="tablist" aria-label="${meta.tablist}">
-        <button type="button" class="skill-tab ${active === 'typing' ? 'active' : ''}" data-skill="typing" role="tab" aria-selected="${active === 'typing'}">
-          <span class="skill-tab-icon">${ICON_TYPING}</span>
-          <span class="skill-tab-label">${meta.typing}</span>
-        </button>
-        <button type="button" class="skill-tab ${active === 'speaking' ? 'active' : ''}" data-skill="speaking" role="tab" aria-selected="${active === 'speaking'}">
-          <span class="skill-tab-icon">${ICON_SPEAKING}</span>
-          <span class="skill-tab-label">${meta.speaking}</span>
-        </button>
-      </nav>
+      <div class="skill-sticky-head">
+        <header class="skill-lang-head">
+          <h1 class="skill-lang-title">${meta.title}</h1>
+          <p class="skill-lang-sub">${meta.sub}</p>
+        </header>
+        <nav class="skill-tabs" role="tablist" aria-label="${meta.tablist}">
+          <button type="button" class="skill-tab ${active === 'typing' ? 'active' : ''}" data-skill="typing" role="tab" aria-selected="${active === 'typing'}">
+            <span class="skill-tab-icon">${ICON_TYPING}</span>
+            <span class="skill-tab-label">${meta.typing}</span>
+          </button>
+          <button type="button" class="skill-tab ${active === 'speaking' ? 'active' : ''}" data-skill="speaking" role="tab" aria-selected="${active === 'speaking'}">
+            <span class="skill-tab-icon">${ICON_SPEAKING}</span>
+            <span class="skill-tab-label">${meta.speaking}</span>
+          </button>
+        </nav>
+      </div>
       <div class="skill-host" id="skill-root"></div>
     </div>
   `
