@@ -646,7 +646,7 @@ body::before {
 
 .passage {
   width: 100%;
-  max-width: 42rem;
+  max-width: none;
   font-size: clamp(1.15rem, 2.6vw, 1.45rem);
   line-height: 2;
   text-align: left;
@@ -678,7 +678,7 @@ body::before {
 .passage-meta {
   align-self: stretch;
   width: 100%;
-  max-width: 42rem;
+  max-width: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -738,13 +738,13 @@ body::before {
 
 .passage-scroll {
   width: 100%;
-  max-width: 42rem;
+  max-width: none;
   max-height: min(42vh, 340px);
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
   padding: 0.15rem 0.2rem 0.55rem 0;
-  align-self: flex-start;
+  align-self: stretch;
   -webkit-overflow-scrolling: touch;
 }
 
