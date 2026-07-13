@@ -34,7 +34,7 @@ export const DEFAULT_JAPANESE_SETTINGS = {
   keyboardCovered: false,
   speakOnCorrect: false,
   speakOnSentenceClick: true,
-  speakShowHiragana: false,
+  speakShowHiragana: true,
   ...DEFAULT_SPEAK_LIMIT,
   speakMaxCount: 200,
   autoAdvancePerfect: true,
@@ -60,6 +60,16 @@ export function loadJapaneseSettings() {
     if (!localStorage.getItem('japanese-mig-kb-shown')) {
       base.keyboardCovered = false
       localStorage.setItem('japanese-mig-kb-shown', '1')
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
+      } catch {
+        /* ignore */
+      }
+    }
+    // One-time: furigana / hiragana-over-kanji on by default for first visit
+    if (!localStorage.getItem('japanese-mig-furi-default-on')) {
+      base.speakShowHiragana = true
+      localStorage.setItem('japanese-mig-furi-default-on', '1')
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
       } catch {

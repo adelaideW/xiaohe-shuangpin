@@ -2,6 +2,7 @@
  * Public-domain Japanese excerpts adapted from 青空文庫 (Aozora Bunko).
  * Source index: https://www.aozora.gr.jp/index_pages/sakuhin_a1.html
  * Readings use Aozora parenthesis form 漢字（かんじ） where present in the source.
+ * Bare kanji are filled at runtime with Kuroshiro (see speaking/furigana.js).
  */
 
 /**

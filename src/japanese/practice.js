@@ -32,6 +32,7 @@ import { punctTypingKey } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { FALLBACK_LESSONS } from '../speaking/lessons.js'
+import { enrichPassageWithReadings } from '../speaking/furigana.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -162,10 +163,12 @@ export function bootJapanese(root) {
     historyIndex: -1,
     drawer: null,
     drawerJustOpened: false,
+    readingsBusy: false,
   }
 
   let tickHandle = null
   let advanceTimer = null
+  let loadPassageToken = 0
 
   function clearAdvanceTimer() {
     if (advanceTimer) {
@@ -408,7 +411,7 @@ export function bootJapanese(root) {
     }`
   }
 
-  function refitCurrentArticle() {
+  async function refitCurrentArticle() {
     if (state.mode !== 'article' || !state.passage) return false
     const { min, max } = articleLengthBounds()
     const typed = typedArticleSources()
@@ -427,7 +430,7 @@ export function bootJapanese(root) {
     if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
       state.passageHistory[state.historyIndex] = fitted
     }
-    loadPassageAt(fitted)
+    await loadPassageAt(fitted)
     return true
   }
 
@@ -437,7 +440,7 @@ export function bootJapanese(root) {
     return shufflePick(JP_SENTENCES, state.passage)
   }
 
-  function loadPassageAt(passage) {
+  function applyPassage(passage) {
     state.passage = passage
     state.units = buildJapaneseUnits(passage)
     state.pages = buildJapanesePages(state.units, settings.charsPerPage)
@@ -449,7 +452,49 @@ export function bootJapanese(root) {
     state.autoAdvanceNote = ''
   }
 
-  function startPassage(mode, { pushHistory = true } = {}) {
+  /**
+   * Load a passage and fill any kanji missing source readings (Aozora / uploads)
+   * via Kuroshiro so they become typeable and show furigana.
+   * @param {*} passage
+   * @param {{ quiet?: boolean }} [opts]
+   */
+  async function loadPassageAt(passage, opts = {}) {
+    const token = ++loadPassageToken
+    applyPassage(passage)
+    const needsEnrich =
+      !passage?._readingsEnriched &&
+      (passage?.segments || []).some(
+        (s) => !s.kana && /[\u4E00-\u9FFF々〆ヵヶ]/.test(s.surface || ''),
+      )
+    if (!needsEnrich) {
+      state.readingsBusy = false
+      const marked = passage?._readingsEnriched
+        ? passage
+        : { ...passage, _readingsEnriched: true }
+      state.passage = marked
+      if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
+        state.passageHistory[state.historyIndex] = marked
+      }
+      return
+    }
+    state.readingsBusy = true
+    if (!opts.quiet) render()
+    try {
+      const enriched = await enrichPassageWithReadings(passage)
+      if (token !== loadPassageToken) return
+      applyPassage(enriched)
+      if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
+        state.passageHistory[state.historyIndex] = enriched
+      }
+    } finally {
+      if (token === loadPassageToken) {
+        state.readingsBusy = false
+        if (!opts.quiet) render()
+      }
+    }
+  }
+
+  async function startPassage(mode, { pushHistory = true } = {}) {
     const passage = pickPassage(mode)
     if (!passage) return
     if (pushHistory) {
@@ -459,25 +504,25 @@ export function bootJapanese(root) {
       state.passageHistory.push(passage)
       state.historyIndex = state.passageHistory.length - 1
     }
-    loadPassageAt(passage)
+    await loadPassageAt(passage)
   }
 
-  function goHistory(delta) {
+  async function goHistory(delta) {
     const next = state.historyIndex + delta
     if (next < 0 || next >= state.passageHistory.length) return
     state.historyIndex = next
-    loadPassageAt(state.passageHistory[next])
+    await loadPassageAt(state.passageHistory[next])
     clearAdvanceTimer()
     render()
     focusApp()
   }
 
-  function goNextPassage() {
+  async function goNextPassage() {
     if (state.historyIndex < state.passageHistory.length - 1) {
-      goHistory(1)
+      await goHistory(1)
       return
     }
-    startPassage(state.mode, { pushHistory: true })
+    await startPassage(state.mode, { pushHistory: true })
     render()
     focusApp()
   }
@@ -515,13 +560,13 @@ export function bootJapanese(root) {
     clearAdvanceTimer()
   }
 
-  function setMode(mode) {
+  async function setMode(mode) {
     state.mode = mode
     saveMode(mode)
     clearAdvanceTimer()
     state.passageHistory = []
     state.historyIndex = -1
-    startPassage(mode)
+    await startPassage(mode)
     render()
     focusApp()
   }
@@ -571,7 +616,11 @@ export function bootJapanese(root) {
       'speakMinCount' in patch
 
     if (lengthChanged && state.mode === 'article') {
-      refitCurrentArticle()
+      void refitCurrentArticle().then(() => {
+        render()
+        focusApp()
+      })
+      return
     }
 
     if (state.drawer === 'settings') {
@@ -789,7 +838,7 @@ export function bootJapanese(root) {
       saveMode('article')
       state.passageHistory.push(passage)
       state.historyIndex = state.passageHistory.length - 1
-      loadPassageAt(passage)
+      await loadPassageAt(passage)
       state.uploadMessage = `追加: ${passage.title} · ${countJapaneseChars(passage)} 文字`
       state.drawer = null
     } catch (err) {
@@ -972,6 +1021,7 @@ export function bootJapanese(root) {
           <div class="pinyin-line">${cur ? `${hira} · ${exp}` : ''}</div>
           <div class="code-progress">${slots}</div>
         </div>
+        ${state.readingsBusy ? `<p class="upload-msg">漢字の読みを自動生成中…</p>` : ''}
         ${state.uploadMessage ? `<p class="upload-msg">${escapeHtml(state.uploadMessage)}</p>` : ''}
       </div>`
   }
@@ -1200,11 +1250,11 @@ export function bootJapanese(root) {
     })
   }
 
-  function restartRound() {
+  async function restartRound() {
     resetSessionStats()
     state.passageHistory = []
     state.historyIndex = -1
-    startPassage(state.mode)
+    await startPassage(state.mode)
     startSession()
     render()
     focusApp()
@@ -1216,15 +1266,16 @@ export function bootJapanese(root) {
     if (e.code === 'KeyR') {
       e.preventDefault()
       e.stopPropagation()
-      loadPassageAt(state.passage)
-      render()
-      focusApp()
+      void loadPassageAt(state.passage).then(() => {
+        render()
+        focusApp()
+      })
       return true
     }
     if (e.code === 'KeyN') {
       e.preventDefault()
       e.stopPropagation()
-      goNextPassage()
+      void goNextPassage()
       return true
     }
     return false
@@ -1253,18 +1304,20 @@ export function bootJapanese(root) {
       resetSessionStats()
       state.passageHistory = []
       state.historyIndex = -1
-      startPassage(state.mode)
-      render()
-      focusApp()
+      void startPassage(state.mode).then(() => {
+        render()
+        focusApp()
+      })
     })
-    document.querySelector('#btn-next-passage')?.addEventListener('click', goNextPassage)
+    document.querySelector('#btn-next-passage')?.addEventListener('click', () => void goNextPassage())
     document.querySelector('#btn-redo-passage')?.addEventListener('click', () => {
-      loadPassageAt(state.passage)
-      render()
-      focusApp()
+      void loadPassageAt(state.passage).then(() => {
+        render()
+        focusApp()
+      })
     })
-    document.querySelector('#btn-prev-passage')?.addEventListener('click', () => goHistory(-1))
-    document.querySelector('#btn-next-passage-nav')?.addEventListener('click', goNextPassage)
+    document.querySelector('#btn-prev-passage')?.addEventListener('click', () => void goHistory(-1))
+    document.querySelector('#btn-next-passage-nav')?.addEventListener('click', () => void goNextPassage())
     document.querySelector('#btn-prev-page')?.addEventListener('click', () => goPage(-1))
     document.querySelector('#btn-next-page')?.addEventListener('click', () => goPage(1))
     document.querySelector('#file-upload')?.addEventListener('change', (e) => {
@@ -1397,6 +1450,9 @@ export function bootJapanese(root) {
   document.title = '日本語タイピング'
   document.documentElement.lang = 'ja'
   state.remainingMs = state.durationMinutes * 60 * 1000
-  startPassage(state.mode)
+  void startPassage(state.mode).then(() => {
+    render()
+    focusApp()
+  })
   render()
 }
