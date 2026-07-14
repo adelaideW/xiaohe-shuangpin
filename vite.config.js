@@ -1,5 +1,5 @@
 import { defineConfig, loadEnv } from 'vite'
-import { synthesizeElevenLabs } from './api/tts.js'
+import { synthesizeTts } from './api/tts.js'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -45,11 +45,12 @@ export default defineConfig(({ mode }) => {
               res.end(JSON.stringify({ error: 'Method not allowed' }))
               return
             }
-            const apiKey = env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_API_KEY
-            if (!apiKey) {
+            const elevenLabsKey = env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_API_KEY
+            const xaiKey = env.XAI_API_KEY || process.env.XAI_API_KEY
+            if (!elevenLabsKey && !xaiKey) {
               res.statusCode = 503
               res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ error: 'ELEVENLABS_API_KEY is not configured' }))
+              res.end(JSON.stringify({ error: 'No TTS API key configured' }))
               return
             }
             try {
@@ -57,10 +58,11 @@ export default defineConfig(({ mode }) => {
               for await (const chunk of req) chunks.push(chunk)
               const raw = Buffer.concat(chunks).toString('utf8')
               const body = raw ? JSON.parse(raw) : {}
-              const audio = await synthesizeElevenLabs(body, apiKey)
+              const { audio, provider } = await synthesizeTts(body, { elevenLabsKey, xaiKey })
               res.statusCode = 200
               res.setHeader('Content-Type', 'audio/mpeg')
               res.setHeader('Cache-Control', 'no-store')
+              res.setHeader('X-TTS-Provider', provider)
               res.end(audio)
             } catch (err) {
               res.statusCode = err?.status || 500
