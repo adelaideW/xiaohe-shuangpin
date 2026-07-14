@@ -105,12 +105,26 @@ export function bootSpeaking(root, opts) {
     return fitLessonToSpeakLimit(pickLesson(language, avoidTitles), language, settings)
   }
 
+  function lessonHasArticle(raw) {
+    if (!raw || typeof raw !== 'object') return false
+    const text = String(raw.sourceArticle || raw.article || raw.text || '').trim()
+    return text.length > 0
+  }
+
   /** @type {ReturnType<typeof pickLesson> | null} */
   let lesson = loadJSON(`${storagePrefix}-lesson`, null)
-  if (!lesson || lesson.language !== language) {
+  if (!lessonHasArticle(lesson) || lesson.language !== language) {
     lesson = chooseLesson()
     saveJSON(`${storagePrefix}-lesson`, lesson)
     saveJSON(`${storagePrefix}-results`, [])
+  } else {
+    // Re-fit to current length settings; tolerate legacy { text } shape
+    const source = {
+      ...lesson,
+      article: lesson.sourceArticle || lesson.article || lesson.text || '',
+    }
+    lesson = fitLessonToSpeakLimit(source, language, settings)
+    saveJSON(`${storagePrefix}-lesson`, lesson)
   }
 
   const state = {
@@ -130,7 +144,7 @@ export function bootSpeaking(root, opts) {
   }
 
   const paragraphs = () =>
-    state.lesson.article
+    String(state.lesson?.article || '')
       .split(/\n\s*\n/)
       .map((p) => p.trim())
       .filter(Boolean)
@@ -142,6 +156,8 @@ export function bootSpeaking(root, opts) {
 
   /** @type {Map<string, string>} */
   const furiganaCache = new Map()
+  /** Bumps on each full render so late furigana work is ignored. */
+  let renderGen = 0
 
   let recognizer = createSpeechRecognizer(language, {
     onUpdate: ({ transcript, listening, error }) => {
@@ -406,6 +422,37 @@ export function bootSpeaking(root, opts) {
   }
 
   /**
+   * Paint furigana after the speaking shell is already visible.
+   * Waiting on Kuroshiro before first paint left Japanese speaking blank.
+   * @param {number} gen
+   */
+  async function enhanceArticleFurigana(gen) {
+    if (language !== 'ja' || !settings.speakShowHiragana) return
+    if (gen !== renderGen) return
+    try {
+      const html = await articleHtml()
+      if (gen !== renderGen) return
+      const host = root.querySelector('.spk-article')
+      if (!host) return
+      host.innerHTML = html
+      host.classList.add('has-furigana')
+      bindArticleClicks()
+      scrollActiveSentenceIntoView()
+    } catch (err) {
+      console.warn('Speaking furigana enhance failed', err)
+    }
+  }
+
+  function bindArticleClicks() {
+    root.querySelectorAll('.spk-sent').forEach((el) => {
+      el.addEventListener('click', () => {
+        const i = Number(el.getAttribute('data-sent'))
+        if (Number.isFinite(i)) setIndex(i, { readAloud: true })
+      })
+    })
+  }
+
+  /**
    * @param {import('./grade.js').DiffOp[] | undefined} ops
    * @param {'original' | 'heard'} side
    */
@@ -522,13 +569,16 @@ export function bootSpeaking(root, opts) {
   }
 
   async function render() {
+    const gen = ++renderGen
     const sents = sentences()
     const gradedCount = state.results.filter(Boolean).length
     const avg = gradedCount
       ? state.results.reduce((sum, r) => sum + (r ? r.rating : 0), 0) / gradedCount
       : 0
     const ttsOk = typeof Audio !== 'undefined' || 'speechSynthesis' in window
-    const articleBody = await articleHtml()
+    // Paint plaintext immediately — Japanese furigana is applied asynchronously
+    // so the article never looks empty while Kuroshiro initializes.
+    const articleBody = articleHtmlSync()
 
     root.innerHTML = `
       <div class="speaking-app">
@@ -749,6 +799,7 @@ export function bootSpeaking(root, opts) {
     bindAll()
     syncArticlePaneHeight()
     scrollActiveSentenceIntoView()
+    void enhanceArticleFurigana(gen)
     const side = root.querySelector('.spk-side')
     if (sideResizeObserver) {
       sideResizeObserver.disconnect()
@@ -848,11 +899,7 @@ export function bootSpeaking(root, opts) {
     })
     root.querySelector('#spk-prev')?.addEventListener('click', () => setIndex(state.index - 1))
     root.querySelector('#spk-next-line')?.addEventListener('click', () => setIndex(state.index + 1))
-    root.querySelectorAll('[data-sent]').forEach((el) => {
-      el.addEventListener('click', () =>
-        setIndex(Number(el.getAttribute('data-sent')), { readAloud: true }),
-      )
-    })
+    bindArticleClicks()
     root.querySelector('#spk-mic')?.addEventListener('click', () => {
       if (state.listening) {
         recognizer.stop()
