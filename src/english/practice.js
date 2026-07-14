@@ -31,7 +31,6 @@ import { extractFromFile } from '../upload.js'
 import { isTypablePunct, punctTypingKey, isTypableSpace } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
-import { FALLBACK_LESSONS } from '../speaking/lessons.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText } from '../speaking/speech.js'
 
@@ -343,12 +342,9 @@ export function bootEnglish(root) {
   }
 
   function allEnglishArticleSources() {
+    // Same built-in bank as speaking (`ENGLISH_ARTICLES`); user uploads on top.
     const user = loadEnglishLibrary().map((d) => ({ title: d.title, text: d.text }))
-    const speaking = (FALLBACK_LESSONS.en || []).map((l) => ({
-      title: l.title,
-      text: l.article,
-    }))
-    return [...ENGLISH_ARTICLES, ...speaking, ...user]
+    return [...ENGLISH_ARTICLES, ...user]
   }
 
   function pickFittedArticle(avoid) {

@@ -31,7 +31,6 @@ import { extractFromFile } from '../upload.js'
 import { punctTypingKey, isPracticeTypingKey } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
-import { FALLBACK_LESSONS } from '../speaking/lessons.js'
 import { enrichPassageWithReadings } from '../speaking/furigana.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText } from '../speaking/speech.js'
@@ -359,32 +358,12 @@ export function bootJapanese(root) {
     return [...JP_ARTICLES, ...user]
   }
 
-  /** Speaking lesson text as secondary bulk fillers (kanji may lack readings). */
-  function speakingFillerSources() {
-    return (FALLBACK_LESSONS.ja || [])
-      .map((lesson) => {
-        try {
-          return passageFromJapaneseText(lesson.title, lesson.article)
-        } catch {
-          return null
-        }
-      })
-      .filter(Boolean)
-  }
-
   function pickFittedArticle(avoid) {
     const { min, max } = articleLengthBounds()
-    const typed = typedArticleSources()
-    const speaking = speakingFillerSources()
-    // Dedupe by title — typing and speaking now share the same bank
-    const byTitle = new Map()
-    for (const p of [...typed, ...speaking]) {
-      if (p?.title && !byTitle.has(p.title)) byTitle.set(p.title, p)
-    }
-    const sources = [...byTitle.values()]
+    // Same built-in bank as speaking (`JA_ARTICLE_BANK` via JP_ARTICLES).
+    const sources = typedArticleSources()
     if (!sources.length) return null
 
-    // Prefer a typed base that already meets min when possible.
     const typedLongEnough = sources.filter((p) => countJapaneseChars(p) >= min)
     const basePool = typedLongEnough.length ? typedLongEnough : sources
     const base = shufflePick(basePool, avoid)

@@ -28,7 +28,6 @@ import { punctTypingKey, isPracticeTypingKey } from './punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
 import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
 import { speakBudgetFromMinutes } from './speaking/length.js'
-import { FALLBACK_LESSONS } from './speaking/lessons.js'
 import { speakText } from './speaking/speech.js'
 
 function escapeHtml(s) {
@@ -395,15 +394,13 @@ function articleLengthBounds() {
 }
 
 function allChineseArticleSources() {
+  // Same built-in bank as speaking (poems + LIBRARY_TEXTS); user uploads on top.
   const poems = ARTICLES
   const lib = LIBRARY_TEXTS.map((t) => safePassageFromText(t.title, t.text)).filter(Boolean)
   const user = loadUserLibrary()
     .map((d) => safePassageFromText(d.title, d.text))
     .filter(Boolean)
-  const speaking = (FALLBACK_LESSONS.zh || [])
-    .map((l) => safePassageFromText(l.title, l.article))
-    .filter(Boolean)
-  return [...poems, ...lib, ...speaking, ...user]
+  return [...poems, ...lib, ...user]
 }
 
 function pickFittedArticle(avoid) {

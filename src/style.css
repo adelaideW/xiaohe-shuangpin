@@ -1944,19 +1944,26 @@ body::before {
 }
 
 .spk-card {
+  align-self: stretch;
+  width: 100%;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 1rem;
 }
 
 .spk-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 1.25rem;
   align-items: stretch;
+  width: 100%;
+  min-width: 0;
 }
 
 .spk-article-pane {
+  width: 100%;
+  min-width: 0;
   height: 680px;
   max-height: 680px;
   min-height: 680px;
@@ -1969,6 +1976,8 @@ body::before {
 }
 
 .spk-article {
+  width: 100%;
+  max-width: none;
   font-size: 1.05rem;
   line-height: 1.75;
   color: var(--ink);
@@ -2105,9 +2114,10 @@ body::before {
 .spk-mic-block {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.45rem;
   padding: 0.75rem 0 0.25rem;
+  width: 100%;
 }
 
 .spk-mic {
@@ -2172,15 +2182,23 @@ body::before {
   margin: 0;
   font-size: 0.88rem;
   color: var(--ink-soft);
+  text-align: right;
+  width: 100%;
 }
 
 .spk-live {
   margin: 0;
-  max-width: 36rem;
-  text-align: center;
+  max-width: 100%;
+  width: 100%;
+  text-align: right;
   font-size: 0.95rem;
   color: var(--ink);
   line-height: 1.45;
+}
+
+.spk-sr-error {
+  text-align: right;
+  width: 100%;
 }
 
 .spk-hint {
@@ -2198,7 +2216,14 @@ body::before {
 .spk-manual {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 0.55rem;
+  width: 100%;
+}
+
+.spk-manual .spk-hint {
+  text-align: right;
+  width: 100%;
 }
 
 .spk-manual textarea {
@@ -2438,6 +2463,7 @@ body::before {
   }
 
   .spk-article-pane {
+    width: 100%;
     min-height: 0;
     max-height: min(50vh, 420px);
     height: auto !important;
