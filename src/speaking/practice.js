@@ -382,7 +382,7 @@ export function bootSpeaking(root, opts) {
   }
 
   function listenControlsHtml() {
-    const tts = typeof Audio !== 'undefined' || 'speechSynthesis' in window
+    const tts = 'speechSynthesis' in window
     if (!tts) {
       return `<p class="spk-hint">${
         language === 'ja'
@@ -626,7 +626,7 @@ export function bootSpeaking(root, opts) {
     const avg = gradedCount
       ? state.results.reduce((sum, r) => sum + (r ? r.rating : 0), 0) / gradedCount
       : 0
-    const ttsOk = typeof Audio !== 'undefined' || 'speechSynthesis' in window
+    const ttsOk = 'speechSynthesis' in window
     // Paint plaintext immediately — Japanese furigana is applied asynchronously
     // so the article never looks empty while Kuroshiro initializes.
     const articleBody = articleHtmlSync()
