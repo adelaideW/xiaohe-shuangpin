@@ -2114,10 +2114,9 @@ body::before {
 .spk-mic-block {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.45rem;
   padding: 0.75rem 0 0.25rem;
-  width: 100%;
 }
 
 .spk-mic {
@@ -2182,23 +2181,15 @@ body::before {
   margin: 0;
   font-size: 0.88rem;
   color: var(--ink-soft);
-  text-align: right;
-  width: 100%;
 }
 
 .spk-live {
   margin: 0;
-  max-width: 100%;
-  width: 100%;
-  text-align: right;
+  max-width: 36rem;
+  text-align: center;
   font-size: 0.95rem;
   color: var(--ink);
   line-height: 1.45;
-}
-
-.spk-sr-error {
-  text-align: right;
-  width: 100%;
 }
 
 .spk-hint {
@@ -2216,14 +2207,7 @@ body::before {
 .spk-manual {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 0.55rem;
-  width: 100%;
-}
-
-.spk-manual .spk-hint {
-  text-align: right;
-  width: 100%;
 }
 
 .spk-manual textarea {
