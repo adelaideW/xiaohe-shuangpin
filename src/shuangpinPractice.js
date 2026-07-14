@@ -1144,12 +1144,12 @@ function renderSettingsDrawer() {
             </label>
             <label class="field-row field-row-unit">
               <span class="unit-prefix">最少</span>
-              <input type="number" id="set-speak-min-minutes" min="1" max="30" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <input type="number" id="set-speak-min-minutes" min="1" max="${settings.speakMaxMinutes}" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
               <span class="unit">分钟</span>
             </label>
             <label class="field-row field-row-unit">
               <span class="unit-prefix">最多</span>
-              <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <input type="number" id="set-speak-minutes" min="${settings.speakMinMinutes}" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
               <span class="unit">分钟</span>
             </label>
             <label class="opt-row">
@@ -1158,12 +1158,12 @@ function renderSettingsDrawer() {
             </label>
             <label class="field-row field-row-unit">
               <span class="unit-prefix">最少</span>
-              <input type="number" id="set-speak-min-count" min="10" max="2000" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <input type="number" id="set-speak-min-count" min="10" max="${settings.speakMaxCount}" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
               <span class="unit">字</span>
             </label>
             <label class="field-row field-row-unit">
               <span class="unit-prefix">最多</span>
-              <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <input type="number" id="set-speak-count" min="${settings.speakMinCount}" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
               <span class="unit">字</span>
             </label>
             <label class="opt-row stacked page-size-row">

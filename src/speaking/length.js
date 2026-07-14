@@ -178,11 +178,12 @@ export function normalizeSpeakLimitSettings(base, language) {
 
   let speakMinMinutes = Math.max(1, Math.min(30, Number(base.speakMinMinutes) || 1))
   let speakMaxMinutes = Math.max(1, Math.min(30, Number(base.speakMaxMinutes) || 5))
-  if (speakMinMinutes > speakMaxMinutes) speakMinMinutes = speakMaxMinutes
+  // Max must never be below Min — raise Max when needed
+  if (speakMaxMinutes < speakMinMinutes) speakMaxMinutes = speakMinMinutes
 
   let speakMinCount = Math.max(10, Math.min(2000, Number(base.speakMinCount) || defaultMinCount))
   let speakMaxCount = Math.max(10, Math.min(2000, Number(base.speakMaxCount) || defaultMaxCount))
-  if (speakMinCount > speakMaxCount) speakMinCount = speakMaxCount
+  if (speakMaxCount < speakMinCount) speakMaxCount = speakMinCount
 
   return {
     speakLimitMode: mode,

@@ -85,6 +85,7 @@ export function loadJapaneseSettings() {
 /** @param {Partial<JapaneseSettings>} patch */
 export function saveJapaneseSettings(patch) {
   const next = { ...loadJapaneseSettings(), ...patch }
+  Object.assign(next, normalizeSpeakLimitSettings(next, 'ja'))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
   return next
 }

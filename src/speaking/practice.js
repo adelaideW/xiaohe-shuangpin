@@ -708,12 +708,12 @@ export function bootSpeaking(root, opts) {
             </label>
             <label class="field-row field-row-unit">
               <span class="unit-prefix">${t('Min', '最小', '最少')}</span>
-              <input type="number" id="set-speak-min-minutes" min="1" max="30" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <input type="number" id="set-speak-min-minutes" min="1" max="${settings.speakMaxMinutes}" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
               <span class="unit">${t('min', '分', '分钟')}</span>
             </label>
             <label class="field-row field-row-unit">
               <span class="unit-prefix">${t('Max', '最大', '最多')}</span>
-              <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <input type="number" id="set-speak-minutes" min="${settings.speakMinMinutes}" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
               <span class="unit">${t('min', '分', '分钟')}</span>
             </label>
             <label class="opt-row">
@@ -726,12 +726,12 @@ export function bootSpeaking(root, opts) {
             </label>
             <label class="field-row field-row-unit">
               <span class="unit-prefix">${t('Min', '最小', '最少')}</span>
-              <input type="number" id="set-speak-min-count" min="10" max="2000" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <input type="number" id="set-speak-min-count" min="10" max="${settings.speakMaxCount}" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
               <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
             </label>
             <label class="field-row field-row-unit">
               <span class="unit-prefix">${t('Max', '最大', '最多')}</span>
-              <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <input type="number" id="set-speak-count" min="${settings.speakMinCount}" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
               <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
             </label>
             <p class="drawer-lead">${t('Applies on Next lesson.', '「次のレッスン」で反映されます。', '点「下一篇」后生效。')}</p>

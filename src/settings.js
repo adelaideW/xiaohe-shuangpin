@@ -89,6 +89,7 @@ export function loadSettings() {
 /** @param {Partial<Settings>} patch */
 export function saveSettings(patch) {
   const next = { ...loadSettings(), ...patch }
+  Object.assign(next, normalizeSpeakLimitSettings(next, 'zh'))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
   return next
 }

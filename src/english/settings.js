@@ -86,6 +86,7 @@ export function loadEnglishSettings() {
 /** @param {Partial<EnglishSettings>} patch */
 export function saveEnglishSettings(patch) {
   const next = { ...loadEnglishSettings(), ...patch }
+  Object.assign(next, normalizeSpeakLimitSettings(next, 'en'))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
   return next
 }

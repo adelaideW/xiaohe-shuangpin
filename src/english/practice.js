@@ -1088,12 +1088,12 @@ export function bootEnglish(root) {
               </label>
               <label class="field-row field-row-unit">
                 <span class="unit-prefix">Min</span>
-                <input type="number" id="set-speak-min-minutes" min="1" max="30" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+                <input type="number" id="set-speak-min-minutes" min="1" max="${settings.speakMaxMinutes}" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
                 <span class="unit">min</span>
               </label>
               <label class="field-row field-row-unit">
                 <span class="unit-prefix">Max</span>
-                <input type="number" id="set-speak-minutes" min="1" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+                <input type="number" id="set-speak-minutes" min="${settings.speakMinMinutes}" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
                 <span class="unit">min</span>
               </label>
               <label class="opt-row">
@@ -1102,12 +1102,12 @@ export function bootEnglish(root) {
               </label>
               <label class="field-row field-row-unit">
                 <span class="unit-prefix">Min</span>
-                <input type="number" id="set-speak-min-count" min="10" max="2000" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+                <input type="number" id="set-speak-min-count" min="10" max="${settings.speakMaxCount}" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
                 <span class="unit">words</span>
               </label>
               <label class="field-row field-row-unit">
                 <span class="unit-prefix">Max</span>
-                <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+                <input type="number" id="set-speak-count" min="${settings.speakMinCount}" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
                 <span class="unit">words</span>
               </label>
               <label class="opt-row stacked page-size-row">
