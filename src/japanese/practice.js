@@ -34,6 +34,7 @@ import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { FALLBACK_LESSONS } from '../speaking/lessons.js'
 import { enrichPassageWithReadings } from '../speaking/furigana.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
+import { speakText } from '../speaking/speech.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -751,21 +752,13 @@ export function bootJapanese(root) {
 
   function speakCurrent() {
     const t = currentTarget()
-    if (!t || !window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(t.surface)
-    u.lang = 'ja-JP'
-    u.rate = 0.9
-    window.speechSynthesis.speak(u)
+    if (!t) return
+    void speakText(t.surface, 'ja', 0.9)
   }
 
   function speakPassage() {
-    if (!state.passage || !window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(passageDisplayText(state.passage))
-    u.lang = 'ja-JP'
-    u.rate = 0.9
-    window.speechSynthesis.speak(u)
+    if (!state.passage) return
+    void speakText(passageDisplayText(state.passage), 'ja', 0.9)
   }
 
   function focusApp() {

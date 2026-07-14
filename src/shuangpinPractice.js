@@ -29,6 +29,7 @@ import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
 import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
 import { speakBudgetFromMinutes } from './speaking/length.js'
 import { FALLBACK_LESSONS } from './speaking/lessons.js'
+import { speakText } from './speaking/speech.js'
 
 function escapeHtml(s) {
   return String(s)
@@ -963,12 +964,8 @@ function handleKey(key) {
 
 function speakCurrent() {
   const t = currentTarget()
-  if (!t || !window.speechSynthesis) return
-  window.speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(t.char)
-  u.lang = 'zh-CN'
-  u.rate = 0.9
-  window.speechSynthesis.speak(u)
+  if (!t) return
+  void speakText(t.char, 'zh', 0.9)
 }
 
 function focusApp() {

@@ -11,6 +11,7 @@ import {
   cancelSpeech,
   pauseSpeech,
   resumeSpeech,
+  isSpeechPaused,
   createSpeechRecognizer,
   splitSentences,
 } from './speech.js'
@@ -213,7 +214,7 @@ export function bootSpeaking(root, opts) {
   }
 
   function playArticle() {
-    if (state.paused && window.speechSynthesis?.paused) {
+    if (state.paused && isSpeechPaused()) {
       resumeSpeech()
       state.paused = false
       state.speaking = true
@@ -314,7 +315,7 @@ export function bootSpeaking(root, opts) {
   }
 
   function listenControlsHtml() {
-    const tts = 'speechSynthesis' in window
+    const tts = typeof Audio !== 'undefined' || 'speechSynthesis' in window
     if (!tts) {
       return `<p class="spk-hint">${
         language === 'ja'
@@ -526,7 +527,7 @@ export function bootSpeaking(root, opts) {
     const avg = gradedCount
       ? state.results.reduce((sum, r) => sum + (r ? r.rating : 0), 0) / gradedCount
       : 0
-    const ttsOk = 'speechSynthesis' in window
+    const ttsOk = typeof Audio !== 'undefined' || 'speechSynthesis' in window
     const articleBody = await articleHtml()
 
     root.innerHTML = `

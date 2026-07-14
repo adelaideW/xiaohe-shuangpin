@@ -1,4 +1,4 @@
-/** Text-to-speech + Web Speech recognition helpers. */
+/** Text-to-speech (ElevenLabs via /api/tts) + Web Speech recognition helpers. */
 
 /** @typedef {'en' | 'ja' | 'zh'} SpeakLang */
 
@@ -20,15 +20,45 @@ function langPrefix(language) {
   return 'en'
 }
 
+/** @type {HTMLAudioElement | null} */
+let currentAudio = null
+/** @type {string | null} */
+let currentObjectUrl = null
+/** @type {SpeechSynthesisUtterance | null} */
+let currentUtter = null
+let usingBrowser = false
+
+function clearAudio() {
+  if (currentAudio) {
+    currentAudio.onended = null
+    currentAudio.onerror = null
+    try {
+      currentAudio.pause()
+    } catch {
+      /* ignore */
+    }
+    currentAudio = null
+  }
+  if (currentObjectUrl) {
+    URL.revokeObjectURL(currentObjectUrl)
+    currentObjectUrl = null
+  }
+}
+
 /**
+ * Browser Web Speech API fallback.
  * @param {string} text
  * @param {SpeakLang} language
  * @param {number} [rate]
  * @param {(() => void) | null} [onEnd]
  */
-export function speakText(text, language, rate = 1, onEnd = null) {
-  if (!('speechSynthesis' in window)) return null
+function speakBrowser(text, language, rate = 1, onEnd = null) {
+  if (!('speechSynthesis' in window)) {
+    onEnd?.()
+    return null
+  }
   window.speechSynthesis.cancel()
+  usingBrowser = true
   const utter = new SpeechSynthesisUtterance(text)
   utter.lang = bcp47(language)
   utter.rate = rate
@@ -38,21 +68,97 @@ export function speakText(text, language, rate = 1, onEnd = null) {
     voices.find((v) => v.lang === utter.lang) ||
     voices.find((v) => v.lang.toLowerCase().startsWith(prefix))
   if (match) utter.voice = match
-  if (onEnd) utter.onend = onEnd
+  utter.onend = () => {
+    currentUtter = null
+    usingBrowser = false
+    onEnd?.()
+  }
+  currentUtter = utter
   window.speechSynthesis.speak(utter)
   return utter
 }
 
+/**
+ * Prefer ElevenLabs (/api/tts); fall back to browser speechSynthesis.
+ * @param {string} text
+ * @param {SpeakLang} language
+ * @param {number} [rate]
+ * @param {(() => void) | null} [onEnd]
+ */
+export async function speakText(text, language, rate = 1, onEnd = null) {
+  const trimmed = String(text || '').trim()
+  if (!trimmed) {
+    onEnd?.()
+    return null
+  }
+
+  cancelSpeech()
+  usingBrowser = false
+
+  try {
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: trimmed, language, rate }),
+    })
+    if (!res.ok) throw new Error(`TTS ${res.status}`)
+    const blob = await res.blob()
+    if (!blob.size) throw new Error('Empty audio')
+    const url = URL.createObjectURL(blob)
+    currentObjectUrl = url
+    const audio = new Audio(url)
+    audio.playbackRate = Math.min(1.5, Math.max(0.7, Number(rate) || 1))
+    currentAudio = audio
+    audio.onended = () => {
+      clearAudio()
+      onEnd?.()
+    }
+    audio.onerror = () => {
+      clearAudio()
+      speakBrowser(trimmed, language, rate, onEnd)
+    }
+    await audio.play()
+    return audio
+  } catch {
+    return speakBrowser(trimmed, language, rate, onEnd)
+  }
+}
+
 export function cancelSpeech() {
+  clearAudio()
+  currentUtter = null
+  usingBrowser = false
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
 }
 
 export function pauseSpeech() {
-  if ('speechSynthesis' in window) window.speechSynthesis.pause()
+  if (currentAudio && !currentAudio.paused) {
+    currentAudio.pause()
+    return
+  }
+  if (usingBrowser && 'speechSynthesis' in window) window.speechSynthesis.pause()
 }
 
 export function resumeSpeech() {
-  if ('speechSynthesis' in window) window.speechSynthesis.resume()
+  if (currentAudio && currentAudio.paused) {
+    void currentAudio.play()
+    return
+  }
+  if (usingBrowser && 'speechSynthesis' in window) window.speechSynthesis.resume()
+}
+
+export function isSpeechPaused() {
+  if (currentAudio) return currentAudio.paused && !currentAudio.ended && currentAudio.currentTime > 0
+  if (usingBrowser && 'speechSynthesis' in window) return window.speechSynthesis.paused
+  return false
+}
+
+export function isSpeechPlaying() {
+  if (currentAudio) return !currentAudio.paused && !currentAudio.ended
+  if (usingBrowser && 'speechSynthesis' in window) {
+    return window.speechSynthesis.speaking && !window.speechSynthesis.paused
+  }
+  return false
 }
 
 /**

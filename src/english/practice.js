@@ -33,6 +33,7 @@ import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { FALLBACK_LESSONS } from '../speaking/lessons.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
+import { speakText } from '../speaking/speech.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -644,21 +645,13 @@ export function bootEnglish(root) {
 
   function speakCurrent() {
     const t = currentTarget()
-    if (!t || !window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(t.char === ' ' ? 'space' : t.char)
-    u.lang = 'en-US'
-    u.rate = 1
-    window.speechSynthesis.speak(u)
+    if (!t) return
+    void speakText(t.char === ' ' ? 'space' : t.char, 'en', 1)
   }
 
   function speakPassage() {
-    if (!state.passage || !window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(state.passage.text)
-    u.lang = 'en-US'
-    u.rate = 0.95
-    window.speechSynthesis.speak(u)
+    if (!state.passage) return
+    void speakText(state.passage.text, 'en', 0.95)
   }
 
   function focusApp() {

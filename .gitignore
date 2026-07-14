@@ -4,7 +4,10 @@ node_modules/
 # Build
 dist/
 
-# Local
+# Secrets / local env
 .DS_Store
+.env
+.env.*
+!.env.example
 *.local
 .vercel
