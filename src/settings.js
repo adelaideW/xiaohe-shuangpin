@@ -7,7 +7,7 @@ import { DEFAULT_SPEAK_LIMIT, normalizeSpeakLimitSettings } from './speaking/len
 const STORAGE_KEY = 'xiaohe-settings'
 
 /** @typedef {'xiaohe' | 'ziranma' | 'sogou'} SchemeId */
-/** @typedef {'auto' | 'manual'} TimerMode */
+/** @typedef {'auto' | 'manual' | 'off'} TimerMode */
 /** @typedef {'time' | 'count'} SpeakLimitMode */
 
 /**
@@ -69,6 +69,7 @@ export function loadSettings() {
     }
     base.minArticleChars = Math.max(1, Math.min(500, Number(base.minArticleChars) || 20))
     base.charsPerPage = Math.max(20, Math.min(300, Number(base.charsPerPage) || 80))
+    if (!['auto', 'manual', 'off'].includes(base.timerMode)) base.timerMode = 'auto'
     Object.assign(base, normalizeSpeakLimitSettings(base, 'zh'))
     // One-time: product default for “有错字时也自动下一篇” flipped on
     if (!localStorage.getItem('xiaohe-mig-autoAdvMistakes-on')) {

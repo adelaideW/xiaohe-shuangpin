@@ -311,6 +311,13 @@ function renderTimerControls() {
 }
 
 function timerRightHtml() {
+  if (settings.timerMode === 'off') {
+    return `
+      <span class="timer-value idle" id="timer-value">不计时</span>
+      <div class="timer-actions"><span class="timer-hint">自由练习</span></div>
+    `
+  }
+
   let status
   if (state.sessionFinished) {
     status = `<span class="timer-value done">结束</span>`
@@ -603,6 +610,15 @@ function applySettingsPatch(patch) {
       state.remainingMs = state.durationMinutes * 60 * 1000
     }
   }
+  if (patch.timerMode === 'off') {
+    // Drop countdown without locking practice into "finished".
+    state.sessionActive = false
+    state.sessionFinished = false
+    state.sessionPaused = false
+    state.autoPaused = false
+    state.pauseStartedAt = null
+    state.completed = false
+  }
   if (patch.charsPerPage != null && state.units.length) {
     state.pages = buildPages(state.units, settings.charsPerPage)
     state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
@@ -621,7 +637,7 @@ function applySettingsPatch(patch) {
     return
   }
 
-  if (patch.charsPerPage != null) {
+  if (patch.charsPerPage != null || patch.timerMode != null) {
     render()
     return
   }
@@ -695,7 +711,12 @@ function ensureSession() {
     // Keep idle auto-pause until user types (noteActivity resumes)
     return true
   }
-  if (settings.timerMode === 'manual') {
+  if (settings.timerMode === 'off' || settings.timerMode === 'manual') {
+    // Untimed (or waiting for Start): still track elapsed for 字/分.
+    if (settings.timerMode === 'off' && !state.startedAt) {
+      state.startedAt = performance.now()
+      state.pausedAccumMs = 0
+    }
     return true
   }
   startSession()
@@ -934,8 +955,8 @@ function handleKey(key) {
   if (state.sessionFinished) return
   if (state.drawer) return
   if (state.completed && state.mode !== 'character') return
-  if (settings.timerMode === 'manual' && !state.sessionActive && !state.sessionFinished) {
-    // Still allow practice without timer; clock stays idle until Start
+  if (settings.timerMode === 'manual' || settings.timerMode === 'off') {
+    // Still allow practice without countdown; clock stays idle until Start (manual) or stays off
   }
   const target = currentTarget()
   if (!target) return
@@ -1096,9 +1117,13 @@ function renderSettingsDrawer() {
             <input type="radio" name="timerMode" value="manual" ${settings.timerMode === 'manual' ? 'checked' : ''} />
             <span>手动点击「开始计时」</span>
           </label>
+          <label class="opt-row">
+            <input type="radio" name="timerMode" value="off" ${settings.timerMode === 'off' ? 'checked' : ''} />
+            <span>不使用计时器</span>
+          </label>
           <label class="opt-row stacked">
             <span>默认时长（分钟）</span>
-            <input type="number" id="set-duration" min="1" max="60" value="${settings.durationMinutes}" />
+            <input type="number" id="set-duration" min="1" max="60" value="${settings.durationMinutes}" ${settings.timerMode === 'off' ? 'disabled' : ''} />
           </label>
         </section>
         <section class="drawer-section">
@@ -1196,6 +1221,22 @@ function renderSettingsDrawer() {
 }
 
 function renderTimerBar() {
+  if (settings.timerMode === 'off') {
+    return `
+      <div class="timer-bar timer-bar-off">
+        <div class="timer-bar-inner">
+          <div class="timer-left">
+            <span class="timer-label">练习时长</span>
+            <span class="timer-hint">已关闭计时</span>
+          </div>
+          <div class="timer-right">
+            ${timerRightHtml()}
+          </div>
+        </div>
+      </div>
+    `
+  }
+
   const presets = DURATION_PRESETS.map(
     (m) =>
       `<button type="button" class="dur-btn ${state.durationMinutes === m && !state.sessionActive ? 'active' : ''}" data-duration="${m}" ${state.sessionActive ? 'disabled' : ''}>${m} 分</button>`,
@@ -1511,7 +1552,7 @@ function restartRound() {
     state.historyIndex = -1
     startPassage(state.mode)
   }
-  startSession()
+  if (settings.timerMode !== 'off') startSession()
   render()
   focusApp()
 }

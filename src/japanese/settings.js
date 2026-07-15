@@ -6,7 +6,7 @@ import { DEFAULT_SPEAK_LIMIT, normalizeSpeakLimitSettings } from '../speaking/le
 
 const STORAGE_KEY = 'japanese-settings'
 
-/** @typedef {'auto' | 'manual'} TimerMode */
+/** @typedef {'auto' | 'manual' | 'off'} TimerMode */
 /** @typedef {'time' | 'count'} SpeakLimitMode */
 
 /**
@@ -54,6 +54,7 @@ export function loadJapaneseSettings() {
     base.minArticleChars = Math.max(1, Math.min(500, Number(base.minArticleChars) || 20))
     base.charsPerPage = Math.max(10, Math.min(120, Number(base.charsPerPage) || 40))
     base.durationMinutes = Math.max(1, Math.min(60, Number(base.durationMinutes) || 5))
+    if (!['auto', 'manual', 'off'].includes(base.timerMode)) base.timerMode = 'auto'
     Object.assign(base, normalizeSpeakLimitSettings(base, 'ja'))
     base.speakShowHiragana = Boolean(base.speakShowHiragana)
     // One-time: show keyboard by default for Japanese (hiragana labels)

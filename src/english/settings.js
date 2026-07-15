@@ -6,7 +6,7 @@ import { DEFAULT_SPEAK_LIMIT, normalizeSpeakLimitSettings } from '../speaking/le
 
 const STORAGE_KEY = 'english-settings'
 
-/** @typedef {'auto' | 'manual'} TimerMode */
+/** @typedef {'auto' | 'manual' | 'off'} TimerMode */
 /** @typedef {'time' | 'count'} SpeakLimitMode */
 
 /**
@@ -56,6 +56,7 @@ export function loadEnglishSettings() {
     base.minArticleChars = Math.max(1, Math.min(2000, Number(base.minArticleChars) || 20))
     base.charsPerPage = Math.max(5, Math.min(500, Number(base.charsPerPage) || 80))
     base.durationMinutes = Math.max(1, Math.min(60, Number(base.durationMinutes) || 5))
+    if (!['auto', 'manual', 'off'].includes(base.timerMode)) base.timerMode = 'auto'
     Object.assign(base, normalizeSpeakLimitSettings(base, 'en'))
     // One-time: migrate older char-based article mins that were way too high as words
     if (!localStorage.getItem('english-mig-article-words') && base.minArticleChars > 200) {

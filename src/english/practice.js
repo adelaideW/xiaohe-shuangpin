@@ -274,6 +274,13 @@ export function bootEnglish(root) {
   }
 
   function timerRightHtml() {
+    if (settings.timerMode === 'off') {
+      return `
+        <span class="timer-value idle" id="timer-value">No timer</span>
+        <div class="timer-actions"><span class="timer-hint">Free practice</span></div>
+      `
+    }
+
     let status
     let actions
     if (state.sessionFinished) {
@@ -514,6 +521,14 @@ export function bootEnglish(root) {
       state.durationMinutes = settings.durationMinutes
       if (!state.sessionActive) state.remainingMs = state.durationMinutes * 60 * 1000
     }
+    if (patch.timerMode === 'off') {
+      state.sessionActive = false
+      state.sessionFinished = false
+      state.sessionPaused = false
+      state.autoPaused = false
+      state.pauseStartedAt = null
+      state.completed = false
+    }
     if (patch.charsPerPage != null && state.units.length) {
       state.pages = buildEnglishPages(state.units, settings.charsPerPage)
       state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
@@ -532,7 +547,7 @@ export function bootEnglish(root) {
       return
     }
 
-    if (patch.charsPerPage != null) {
+    if (patch.charsPerPage != null || patch.timerMode != null) {
       render()
       return
     }
@@ -540,8 +555,6 @@ export function bootEnglish(root) {
     if (state.drawer === 'settings') {
       if (lengthChanged) {
         render()
-      } else if ('timerMode' in patch) {
-        renderTimerControls()
       }
       return
     }
@@ -552,7 +565,13 @@ export function bootEnglish(root) {
   function ensureSession() {
     if (state.sessionFinished) return true
     if (state.sessionActive) return true
-    if (settings.timerMode === 'manual') return true
+    if (settings.timerMode === 'off' || settings.timerMode === 'manual') {
+      if (settings.timerMode === 'off' && !state.startedAt) {
+        state.startedAt = performance.now()
+        state.pausedAccumMs = 0
+      }
+      return true
+    }
     startSession()
     renderTimerControls()
     document.querySelectorAll('[data-duration], #custom-duration').forEach((el) => {
@@ -814,6 +833,19 @@ export function bootEnglish(root) {
   }
 
   function renderTimerBar() {
+    if (settings.timerMode === 'off') {
+      return `
+      <div class="timer-bar timer-bar-off">
+        <div class="timer-bar-inner">
+          <div class="timer-left">
+            <span class="timer-label">Session</span>
+            <span class="timer-hint">Timer off</span>
+          </div>
+          <div class="timer-right">${timerRightHtml()}</div>
+        </div>
+      </div>
+    `
+    }
     const presets = DURATION_PRESETS.map(
       (m) =>
         `<button type="button" class="dur-btn ${state.durationMinutes === m && !state.sessionActive ? 'active' : ''}" data-duration="${m}" ${state.sessionActive ? 'disabled' : ''}>${m} min</button>`,
@@ -1052,9 +1084,13 @@ export function bootEnglish(root) {
               <input type="radio" name="timerMode" value="manual" ${settings.timerMode === 'manual' ? 'checked' : ''} />
               <span>Manual start</span>
             </label>
+            <label class="opt-row">
+              <input type="radio" name="timerMode" value="off" ${settings.timerMode === 'off' ? 'checked' : ''} />
+              <span>No timer</span>
+            </label>
             <label class="opt-row stacked">
               <span>Default minutes</span>
-              <input type="number" id="set-duration" min="1" max="60" value="${settings.durationMinutes}" />
+              <input type="number" id="set-duration" min="1" max="60" value="${settings.durationMinutes}" ${settings.timerMode === 'off' ? 'disabled' : ''} />
             </label>
           </section>
           <section class="drawer-section">
@@ -1205,7 +1241,7 @@ export function bootEnglish(root) {
     state.passageHistory = []
     state.historyIndex = -1
     startPassage(state.mode)
-    startSession()
+    if (settings.timerMode !== 'off') startSession()
     render()
     focusApp()
   }

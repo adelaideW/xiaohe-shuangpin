@@ -285,6 +285,13 @@ export function bootJapanese(root) {
   }
 
   function timerRightHtml() {
+    if (settings.timerMode === 'off') {
+      return `
+        <span class="timer-value idle" id="timer-value">なし</span>
+        <div class="timer-actions"><span class="timer-hint">自由練習</span></div>
+      `
+    }
+
     let status
     let actions
     const iconPause = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`
@@ -572,6 +579,14 @@ export function bootJapanese(root) {
       state.durationMinutes = settings.durationMinutes
       if (!state.sessionActive) state.remainingMs = state.durationMinutes * 60 * 1000
     }
+    if (patch.timerMode === 'off') {
+      state.sessionActive = false
+      state.sessionFinished = false
+      state.sessionPaused = false
+      state.autoPaused = false
+      state.pauseStartedAt = null
+      state.completed = false
+    }
     if (patch.charsPerPage != null && state.units.length) {
       state.pages = buildJapanesePages(state.units, settings.charsPerPage)
       state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
@@ -609,7 +624,7 @@ export function bootJapanese(root) {
       return
     }
 
-    if (patch.charsPerPage != null) {
+    if (patch.charsPerPage != null || patch.timerMode != null) {
       render()
       return
     }
@@ -617,8 +632,6 @@ export function bootJapanese(root) {
     if (state.drawer === 'settings') {
       if (lengthChanged || 'speakShowHiragana' in patch) {
         render()
-      } else if ('timerMode' in patch) {
-        renderTimerControls()
       }
       return
     }
@@ -628,7 +641,13 @@ export function bootJapanese(root) {
 
   function ensureSession() {
     if (state.sessionFinished || state.sessionActive) return true
-    if (settings.timerMode === 'manual') return true
+    if (settings.timerMode === 'off' || settings.timerMode === 'manual') {
+      if (settings.timerMode === 'off' && !state.startedAt) {
+        state.startedAt = performance.now()
+        state.pausedAccumMs = 0
+      }
+      return true
+    }
     startSession()
     renderTimerControls()
     return true
@@ -845,6 +864,18 @@ export function bootJapanese(root) {
   }
 
   function renderTimerBar() {
+    if (settings.timerMode === 'off') {
+      return `
+      <div class="timer-bar timer-bar-off">
+        <div class="timer-bar-inner">
+          <div class="timer-left">
+            <span class="timer-label">練習時間</span>
+            <span class="timer-hint">タイマーオフ</span>
+          </div>
+          <div class="timer-right">${timerRightHtml()}</div>
+        </div>
+      </div>`
+    }
     const presets = DURATION_PRESETS.map(
       (m) =>
         `<button type="button" class="dur-btn ${state.durationMinutes === m && !state.sessionActive ? 'active' : ''}" data-duration="${m}" ${state.sessionActive ? 'disabled' : ''}>${m} 分</button>`,
@@ -1061,7 +1092,8 @@ export function bootJapanese(root) {
             <h3>タイマー</h3>
             <label class="opt-row"><input type="radio" name="timerMode" value="auto" ${settings.timerMode === 'auto' ? 'checked' : ''} /><span>入力で自動開始</span></label>
             <label class="opt-row"><input type="radio" name="timerMode" value="manual" ${settings.timerMode === 'manual' ? 'checked' : ''} /><span>手動開始</span></label>
-            <label class="opt-row stacked"><span>既定の分数</span><input type="number" id="set-duration" min="1" max="60" value="${settings.durationMinutes}" /></label>
+            <label class="opt-row"><input type="radio" name="timerMode" value="off" ${settings.timerMode === 'off' ? 'checked' : ''} /><span>タイマーなし</span></label>
+            <label class="opt-row stacked"><span>既定の分数</span><input type="number" id="set-duration" min="1" max="60" value="${settings.durationMinutes}" ${settings.timerMode === 'off' ? 'disabled' : ''} /></label>
           </section>
           <section class="drawer-section">
             <h3>文章</h3>
@@ -1249,7 +1281,7 @@ export function bootJapanese(root) {
     state.passageHistory = []
     state.historyIndex = -1
     await startPassage(state.mode)
-    startSession()
+    if (settings.timerMode !== 'off') startSession()
     render()
     focusApp()
   }
