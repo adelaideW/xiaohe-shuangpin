@@ -114,53 +114,21 @@ export function countJapaneseUnits(passage) {
 }
 
 /**
- * Fit a typing passage into [minChars, maxChars] by growing (cycle extras) then trimming.
+ * Trim a single Japanese passage to at most maxChars (never concatenates others).
  * @param {JpPassage} passage
- * @param {number} minChars
+ * @param {number} minChars unused — kept for call-site compatibility
  * @param {number} maxChars
- * @param {JpPassage[]} [extraPassages]
+ * @param {JpPassage[]} [_extraPassages] ignored
  * @returns {JpPassage}
  */
-export function fitJapanesePassage(passage, minChars, maxChars, extraPassages = []) {
-  let min = Math.max(1, Math.floor(Number(minChars) || 1))
-  let max = Math.max(1, Math.floor(Number(maxChars) || min))
-  if (min > max) min = max
-
-  /** @type {JpPassage[]} */
-  const pool = [passage, ...extraPassages].filter((p) => p?.segments?.length)
-  if (!pool.length) {
-    return { title: passage?.title || '文章', segments: [] }
-  }
-
+export function fitJapanesePassage(passage, minChars, maxChars, _extraPassages = []) {
+  void minChars
+  const max = Math.max(1, Math.floor(Number(maxChars) || 1))
   /** @type {JpSegment[]} */
   let segments = [...(passage?.segments || [])]
-
-  const appendPassage = (extra) => {
-    if (!extra?.segments?.length) return
-    if (segments.length) {
-      const last = segments[segments.length - 1]
-      if (last?.surface && !/[。！？\n]$/.test(last.surface)) {
-        segments.push({ surface: '。', kana: null })
-      }
-    }
-    segments = segments.concat(extra.segments)
-  }
-
-  // Append from pool in a cycle until min is met (bank alone may be under min).
-  const extrasFirst = pool.filter((p) => p !== passage)
-  const cycle = extrasFirst.length ? [...extrasFirst, passage] : pool
-  let guard = 0
-  let idx = 0
-  while (countJapaneseChars({ segments }) < min && guard < 40) {
-    appendPassage(cycle[idx % cycle.length])
-    idx += 1
-    guard += 1
-  }
-
   while (segments.length > 1 && countJapaneseChars({ segments }) > max) {
     segments.pop()
   }
-
   return {
     title: passage?.title || '文章',
     segments,

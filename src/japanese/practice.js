@@ -364,15 +364,25 @@ export function bootJapanese(root) {
     const sources = typedArticleSources()
     if (!sources.length) return null
 
-    const typedLongEnough = sources.filter((p) => countJapaneseChars(p) >= min)
-    const basePool = typedLongEnough.length ? typedLongEnough : sources
-    const base = shufflePick(basePool, avoid)
+    const measured = sources
+      .map((p) => ({ p, n: countJapaneseChars(p) }))
+      .filter((x) => x.n > 0)
+    const inRange = measured.filter((x) => x.n >= min && x.n <= max)
+    let base =
+      shufflePick(
+        inRange.length ? inRange.map((x) => x.p) : [],
+        avoid,
+      ) || null
+    if (!base) {
+      const aboveMin = measured.filter((x) => x.n >= min).sort((a, b) => a.n - b.n)
+      base = shufflePick(aboveMin.map((x) => x.p), avoid)
+    }
+    if (!base) {
+      const longest = [...measured].sort((a, b) => b.n - a.n)
+      base = shufflePick(longest.slice(0, Math.min(5, longest.length)).map((x) => x.p), avoid)
+    }
     if (!base) return null
-
-    const fillers = sources
-      .filter((p) => p !== base)
-      .sort(() => Math.random() - 0.5)
-    return fitJapanesePassage(base, min, max, fillers)
+    return fitJapanesePassage(base, min, max)
   }
 
   /**
@@ -402,18 +412,11 @@ export function bootJapanese(root) {
   async function refitCurrentArticle() {
     if (state.mode !== 'article' || !state.passage) return false
     const { min, max } = articleLengthBounds()
-    const typed = typedArticleSources()
-    const speaking = speakingFillerSources()
-    const byTitle = new Map()
-    for (const p of [...typed, ...speaking]) {
-      if (p?.title && !byTitle.has(p.title)) byTitle.set(p.title, p)
-    }
-    const sources = [...byTitle.values()]
+    const sources = typedArticleSources()
     const base =
       sources.find((p) => p.title === state.passage.title) || sources[0]
     if (!base) return false
-    const fillers = sources.filter((p) => p !== base).sort(() => Math.random() - 0.5)
-    const fitted = fitJapanesePassage(base, min, max, fillers)
+    const fitted = fitJapanesePassage(base, min, max)
     if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
       state.passageHistory[state.historyIndex] = fitted
     }

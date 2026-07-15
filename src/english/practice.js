@@ -351,14 +351,28 @@ export function bootEnglish(root) {
     const { min, max } = articleLengthBounds()
     const sources = allEnglishArticleSources()
     if (!sources.length) return null
-    const longEnough = sources.filter((p) => countEnglishWords(p.text) >= min)
-    const basePool = longEnough.length ? longEnough : sources
-    const basePassage = shufflePick(basePool, avoid)
-    if (!basePassage) return null
-    const fillers = sources
-      .filter((p) => p !== basePassage)
-      .sort(() => Math.random() - 0.5)
-    return fitEnglishPassage(basePassage, min, max, fillers)
+    const measured = sources
+      .map((p) => ({ p, n: countEnglishWords(p.text) }))
+      .filter((x) => x.n > 0)
+    // Prefer a single article already inside [min, max]
+    const inRange = measured.filter((x) => x.n >= min && x.n <= max)
+    let base =
+      shufflePick(
+        inRange.length ? inRange.map((x) => x.p) : [],
+        avoid,
+      ) || null
+    if (!base) {
+      // Else shortest article that still meets min (will trim to max)
+      const aboveMin = measured.filter((x) => x.n >= min).sort((a, b) => a.n - b.n)
+      base = shufflePick(aboveMin.map((x) => x.p), avoid)
+    }
+    if (!base) {
+      // All shorter than min — use the longest single article as-is
+      const longest = [...measured].sort((a, b) => b.n - a.n)
+      base = shufflePick(longest.slice(0, Math.min(5, longest.length)).map((x) => x.p), avoid)
+    }
+    if (!base) return null
+    return fitEnglishPassage(base, min, max)
   }
 
   function refitCurrentArticle() {
@@ -368,8 +382,7 @@ export function bootEnglish(root) {
     const base =
       sources.find((p) => p.title === state.passage.title) || sources[0]
     if (!base) return false
-    const fillers = sources.filter((p) => p !== base).sort(() => Math.random() - 0.5)
-    const fitted = fitEnglishPassage(base, min, max, fillers)
+    const fitted = fitEnglishPassage(base, min, max)
     if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length) {
       state.passageHistory[state.historyIndex] = fitted
     }

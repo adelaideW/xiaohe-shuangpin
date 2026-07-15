@@ -161,36 +161,19 @@ export function countEnglishWords(text) {
 }
 
 /**
- * Grow/trim English article text to [minWords, maxWords] by cycling extras.
+ * Trim a single English article to at most maxWords (never concatenates other passages).
  * @param {{ title: string, text: string }} passage
- * @param {number} minWords
+ * @param {number} minWords unused — kept for call-site compatibility
  * @param {number} maxWords
- * @param {{ title: string, text: string }[]} [extraPassages]
+ * @param {{ title: string, text: string }[]} [_extraPassages] ignored
  */
-export function fitEnglishPassage(passage, minWords, maxWords, extraPassages = []) {
-  let min = Math.max(1, Math.floor(Number(minWords) || 1))
-  let max = Math.max(1, Math.floor(Number(maxWords) || min))
-  if (min > max) min = max
-
-  const pool = [passage, ...extraPassages].filter((p) => p?.text?.trim())
-  if (!pool.length) return { title: passage?.title || 'Article', text: '' }
-
+export function fitEnglishPassage(passage, minWords, maxWords, _extraPassages = []) {
+  void minWords
+  const max = Math.max(1, Math.floor(Number(maxWords) || 1))
   let text = String(passage?.text || '').trim()
-  const extrasFirst = pool.filter((p) => p !== passage)
-  const cycle = extrasFirst.length ? [...extrasFirst, passage] : pool
-  let guard = 0
-  let idx = 0
-  while (countEnglishWords(text) < min && guard < 40) {
-    const next = cycle[idx % cycle.length]
-    idx += 1
-    guard += 1
-    const chunk = String(next.text || '').trim()
-    if (!chunk) continue
-    text = text ? `${text} ${chunk}` : chunk
-  }
+  if (!text) return { title: passage?.title || 'Article', text: '' }
 
   if (countEnglishWords(text) > max) {
-    // Keep whitespace and punctuation while cutting at a word boundary
     const parts = text.match(/[A-Za-z0-9']+|\s+|[^\sA-Za-z0-9']+/g) || []
     let acc = ''
     let count = 0
