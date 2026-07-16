@@ -1,5 +1,5 @@
 /**
- * Shuangpin schemes: Xiaohe (default), Ziranma, Sogou.
+ * Input schemes: Xiaohe / Ziranma / Sogou (双拼) and Quanpin (全拼).
  */
 
 import {
@@ -12,6 +12,35 @@ import {
 } from './xiaohe.js'
 
 export { normalizePinyin, splitSyllable, withUvCodeAliases }
+
+/** Plain QWERTY — no 声母/韵母 overlays (used by 全拼). */
+export const QUANPIN_LAYOUT = []
+
+/**
+ * Full pinyin syllable (tone-less). ü is normalized to v for typing.
+ * @param {string} pinyin
+ */
+export function toQuanpin(pinyin) {
+  return normalizePinyin(pinyin)
+}
+
+/**
+ * Accepted full-pinyin spellings. ü is stored as v; also accept ju/qu/xu/yu for jü…
+ * @param {string} pinyin
+ * @returns {string[]}
+ */
+export function quanpinOptions(pinyin) {
+  const code = toQuanpin(pinyin)
+  if (!code) return []
+  const opts = new Set([code])
+  // Only ü-family syllables: ju/jue/juan/jun (and q/x/y). Not you/yong/etc.
+  const ueFamily = /^[jqxy](u|v)(e|an|n)?$/
+  if (ueFamily.test(code)) {
+    opts.add(code.replace(/^([jqxy])v/, '$1u'))
+    opts.add(code.replace(/^([jqxy])u/, '$1v'))
+  }
+  return [...opts]
+}
 
 export const SCHEMES = {
   xiaohe: {
@@ -99,6 +128,12 @@ export const SCHEMES = {
       ],
     ],
     encode: toSogou,
+  },
+  quanpin: {
+    id: 'quanpin',
+    label: '全拼',
+    layout: QUANPIN_LAYOUT,
+    encode: toQuanpin,
   },
 }
 
@@ -287,12 +322,13 @@ export function encode(schemeId, pinyin) {
 }
 
 /**
- * All accepted 2-key codes for a syllable (canonical first; ju/qv/… also allow u).
+ * All accepted key sequences for a syllable.
  * @param {string} schemeId
  * @param {string} pinyin
  * @returns {string[]}
  */
 export function encodeOptions(schemeId, pinyin) {
+  if (schemeId === 'quanpin') return quanpinOptions(pinyin)
   const code = encode(schemeId, pinyin)
   return withUvCodeAliases(pinyin, code)
 }
@@ -311,8 +347,21 @@ export function getSchemeLabel(schemeId) {
   return (SCHEMES[schemeId] || SCHEMES.xiaohe).label
 }
 
+/** True when the scheme expects full pinyin (variable length), not 2-key 双拼. */
+export function isQuanpinScheme(schemeId) {
+  return schemeId === 'quanpin'
+}
+
 export function selfTestScheme(schemeId) {
   if (schemeId === 'xiaohe') return xiaoheSelfTest()
+  if (schemeId === 'quanpin') {
+    const samples = ['zhong', 'guo', 'a', 'ai', 'yu', 'shi', 'nü', 'lü']
+    return samples.map((py) => {
+      const got = toQuanpin(py)
+      const expect = normalizePinyin(py)
+      return { py, expect, got, ok: got === expect && got.length >= 1 }
+    })
+  }
   // Spot-check shared syllables for other schemes
   const encodeFn = SCHEMES[schemeId]?.encode
   if (!encodeFn) return []

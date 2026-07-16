@@ -1,4 +1,4 @@
-import { encode, encodeOptions, getLayout, getSchemeLabel, selfTestScheme } from './schemes.js'
+import { encode, encodeOptions, getLayout, getSchemeLabel, isQuanpinScheme, selfTestScheme } from './schemes.js'
 import { CHARACTERS, SENTENCES, ARTICLES, buildUnits } from './data.js'
 import {
   loadSettings,
@@ -619,6 +619,9 @@ function applySettingsPatch(patch) {
     state.pauseStartedAt = null
     state.completed = false
   }
+  if (patch.scheme != null) {
+    state.buffer = ''
+  }
   if (patch.charsPerPage != null && state.units.length) {
     state.pages = buildPages(state.units, settings.charsPerPage)
     state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
@@ -637,7 +640,7 @@ function applySettingsPatch(patch) {
     return
   }
 
-  if (patch.charsPerPage != null || patch.timerMode != null) {
+  if (patch.charsPerPage != null || patch.timerMode != null || patch.scheme != null) {
     render()
     return
   }
@@ -813,22 +816,34 @@ function patchKeyboardHints() {
     (t?.kind === 'punct' || t?.kind === 'space') && settings.showHints && !state.sessionFinished
       ? code
       : ''
-  const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
-  const finalKeys =
+  const typedLen = state.buffer.length
+  const quanpin = isQuanpinScheme(settings.scheme)
+  const nextKeys =
     !punctKey && settings.showHints && codes.length && !state.sessionFinished
+      ? [...new Set(codes.map((c) => c[typedLen]).filter(Boolean))]
+      : []
+  const initKey =
+    !punctKey && !quanpin && settings.showHints && code && !state.sessionFinished ? code[0] : ''
+  const finalKeys =
+    !punctKey && !quanpin && settings.showHints && codes.length && !state.sessionFinished
       ? [...new Set(codes.map((c) => c[1]).filter(Boolean))]
       : []
-  const typedLen = state.buffer.length
   const { keys: punctTargets, needShift } = resolveHintKeys(punctKey)
   const punctSet = new Set(punctTargets)
   document.querySelectorAll('.key[data-key]').forEach((el) => {
     const keyId = el.dataset.key
     el.classList.toggle('hint', Boolean(punctKey && punctSet.has(keyId)))
     el.classList.toggle('hint-shift', Boolean(punctKey && needShift && keyId === 'Shift'))
-    el.classList.toggle('hint-initial', Boolean(initKey && keyId === initKey && typedLen === 0))
+    el.classList.toggle(
+      'hint-initial',
+      Boolean(
+        (quanpin && nextKeys.includes(keyId)) ||
+          (!quanpin && initKey && keyId === initKey && typedLen === 0),
+      ),
+    )
     el.classList.toggle(
       'hint-final',
-      Boolean(finalKeys.includes(keyId) && typedLen === 1),
+      Boolean(!quanpin && finalKeys.includes(keyId) && typedLen === 1),
     )
   })
 }
@@ -1127,7 +1142,7 @@ function renderSettingsDrawer() {
           </label>
         </section>
         <section class="drawer-section">
-          <h3>双拼方案</h3>
+          <h3>输入方案</h3>
           ${schemes}
         </section>
         <section class="drawer-section">
@@ -1278,6 +1293,7 @@ function renderStats() {
 
 function renderKeyboard() {
   const layout = getLayout(settings.scheme)
+  const quanpin = isQuanpinScheme(settings.scheme)
   const overlays = new Map()
   for (const row of layout) {
     for (const [display, initLabel, finalLabel] of row) {
@@ -1293,12 +1309,17 @@ function renderKeyboard() {
     (t?.kind === 'punct' || t?.kind === 'space') && settings.showHints && !state.sessionFinished
       ? code
       : ''
-  const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
+  const typedLen = state.buffer.length
+  const nextKeys =
+    !punctKey && quanpin && settings.showHints && codes.length && !state.sessionFinished
+      ? [...new Set(codes.map((c) => c[typedLen]).filter(Boolean))]
+      : []
+  const initKey =
+    !punctKey && !quanpin && settings.showHints && code && !state.sessionFinished ? code[0] : ''
   const finalKeys =
-    !punctKey && settings.showHints && codes.length && !state.sessionFinished
+    !punctKey && !quanpin && settings.showHints && codes.length && !state.sessionFinished
       ? [...new Set(codes.map((c) => c[1]).filter(Boolean))]
       : []
-  const typedLen = state.buffer.length
   const { keys: punctTargets, needShift } = resolveHintKeys(punctKey)
   const punctSet = new Set(punctTargets)
 
@@ -1309,8 +1330,9 @@ function renderKeyboard() {
       const parts = []
       if (punctKey && punctSet.has(key.id)) parts.push('hint')
       if (punctKey && needShift && key.id === 'Shift') parts.push('hint-shift')
-      if (initKey && key.id === initKey && typedLen === 0) parts.push('hint-initial')
-      if (finalKeys.includes(key.id) && typedLen === 1) parts.push('hint-final')
+      if (quanpin && nextKeys.includes(key.id)) parts.push('hint-initial')
+      if (!quanpin && initKey && key.id === initKey && typedLen === 0) parts.push('hint-initial')
+      if (!quanpin && finalKeys.includes(key.id) && typedLen === 1) parts.push('hint-final')
       return parts.join(' ')
     },
     renderInner: (key) => {
@@ -1337,8 +1359,11 @@ function renderKeyboard() {
   return `
     <div class="keyboard-wrap">
       <div class="legend">
-        <span class="init">声母</span>
-        <span class="final">韵母</span>
+        ${
+          quanpin
+            ? '<span class="init">字母</span><span class="final">全拼</span>'
+            : '<span class="init">声母</span><span class="final">韵母</span>'
+        }
       </div>
       <div class="keyboard keyboard-full ${settings.keyboardCovered ? 'covered' : ''}" id="keyboard">
         ${rows}
@@ -1500,12 +1525,17 @@ function render() {
         : ''
 
   const mistakeCount = loadMistakes().length
+  const speakLabel = state.mode === 'character' ? '读音' : '朗读'
+  const speakHint =
+    state.mode === 'character'
+      ? '<span><kbd>读音</kbd> 按钮听当前字</span>'
+      : '<span><kbd>朗读</kbd> 按钮读当前字</span>'
 
   app.innerHTML = `
     <header class="topbar">
       <div class="brand brand-modes">
         <nav class="mode-tabs" aria-label="练习模式">${modeButtons}</nav>
-        <span class="scheme">${getSchemeLabel(settings.scheme)}</span>
+        <button type="button" class="scheme scheme-btn" id="btn-cycle-scheme" title="点击切换输入方案">${getSchemeLabel(settings.scheme)}</button>
       </div>
       <div class="top-actions">
         <button type="button" class="ghost-chip" id="btn-open-mistakes">错字本${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
@@ -1518,7 +1548,7 @@ function render() {
       <section class="practice-card enter" id="practice-card" tabindex="0">
         ${stage}
         <div class="hints-row hints-row-bottom">
-          <span><kbd>朗读</kbd> 按钮读当前字</span>
+          ${speakHint}
           <span><kbd>Esc</kbd> 清空当前输入</span>
           <span><kbd>⌥R</kbd> 重练 · <kbd>⌥N</kbd> 下一篇</span>
         </div>
@@ -1526,7 +1556,7 @@ function render() {
       </section>
       <div class="toolbar">
         <button type="button" id="btn-skip">跳过</button>
-        <button type="button" id="btn-speak">朗读</button>
+        <button type="button" id="btn-speak">${speakLabel}</button>
         <button type="button" id="btn-reset">重置统计</button>
         <button type="button" id="btn-hints">${settings.showHints ? '隐藏键位提示' : '显示键位提示'}</button>
         <button type="button" id="kb-toggle">${settings.keyboardCovered ? '显示键盘' : '遮盖键盘'}</button>
@@ -1554,6 +1584,14 @@ function restartRound() {
   }
   if (settings.timerMode !== 'off') startSession()
   render()
+  focusApp()
+}
+
+function cycleScheme() {
+  const ids = SCHEME_OPTIONS.map((s) => s.id)
+  const i = Math.max(0, ids.indexOf(settings.scheme))
+  const next = ids[(i + 1) % ids.length]
+  applySettingsPatch({ scheme: next })
   focusApp()
 }
 
@@ -1656,6 +1694,9 @@ function bindEvents() {
     })
   })
 
+  document.querySelector('#btn-cycle-scheme')?.addEventListener('click', () => {
+    cycleScheme()
+  })
   document.querySelector('#btn-open-mistakes')?.addEventListener('click', () => openDrawer('mistakes'))
   document.querySelector('#btn-open-settings')?.addEventListener('click', () => openDrawer('settings'))
   document.querySelector('#drawer-backdrop')?.addEventListener('click', closeDrawer)

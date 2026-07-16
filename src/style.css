@@ -106,6 +106,28 @@ body::before {
   flex-shrink: 0;
 }
 
+button.scheme-btn {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--jade);
+  background: var(--jade-soft);
+  border: 1px solid transparent;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+button.scheme-btn:hover {
+  border-color: color-mix(in srgb, var(--jade) 35%, transparent);
+  background: color-mix(in srgb, var(--jade-soft) 70%, white);
+}
+
+button.scheme-btn:focus-visible {
+  outline: 2px solid var(--jade);
+  outline-offset: 2px;
+}
+
 /* ——— Button system ———
    Types: primary (solid jade), secondary (outlined), warning, icon, chip
    Hover never changes size, padding, or border-width — only colors.
