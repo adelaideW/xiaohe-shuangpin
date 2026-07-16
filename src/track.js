@@ -11,9 +11,9 @@ const STORAGE_PANEL = 'typing-lang-panel-collapsed'
 export const TRACKS = [
   {
     id: 'shuangpin',
-    label: '拼写',
+    label: '中文',
     sub: '打字 & 口语',
-    short: '拼',
+    short: '中',
   },
   {
     id: 'english',

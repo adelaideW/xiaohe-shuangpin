@@ -36,7 +36,9 @@ import {
   consumePendingDrawer,
   patchStatsSummary,
   registerDrawerHandlers,
+  registerModeControl,
   syncBottomTabActive,
+  syncModeControl,
   wrapCollapsibleStats,
 } from './mobileNav.js'
 
@@ -1596,6 +1598,7 @@ function render() {
 
   bindEvents()
   bindStatsDisclosure()
+  syncModeControl()
   state.drawerJustOpened = false
   requestAnimationFrame(() => {
     document.querySelector('.practice-card')?.classList.remove('enter')
@@ -1891,6 +1894,12 @@ export function bootShuangpin(root) {
     open: (name) => openDrawer(name),
     close: () => closeDrawer(),
     getOpen: () => state.drawer,
+  })
+
+  registerModeControl({
+    modes: MODES,
+    getCurrent: () => state.mode,
+    onSelect: (id) => setMode(id),
   })
 
   const pending = consumePendingDrawer()

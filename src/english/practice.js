@@ -40,7 +40,9 @@ import {
   consumePendingDrawer,
   patchStatsSummary,
   registerDrawerHandlers,
+  registerModeControl,
   syncBottomTabActive,
+  syncModeControl,
   wrapCollapsibleStats,
 } from '../mobileNav.js'
 
@@ -1336,6 +1338,7 @@ export function bootEnglish(root) {
 
     bindEvents()
     bindStatsDisclosure()
+    syncModeControl()
     state.drawerJustOpened = false
     requestAnimationFrame(() => {
       document.querySelector('.practice-card')?.classList.remove('enter')
@@ -1569,6 +1572,12 @@ export function bootEnglish(root) {
     open: (name) => openDrawer(name),
     close: () => closeDrawer(),
     getOpen: () => state.drawer,
+  })
+
+  registerModeControl({
+    modes: MODES,
+    getCurrent: () => state.mode,
+    onSelect: (id) => setMode(id),
   })
 
   const pending = consumePendingDrawer()

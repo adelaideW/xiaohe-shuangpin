@@ -1849,6 +1849,34 @@ button.scheme-btn:focus-visible {
   opacity: 0.7;
 }
 
+.mode-switch-btn {
+  display: none;
+  appearance: none;
+  align-items: center;
+  gap: 0.28rem;
+  margin-left: auto;
+  height: 1.85rem;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mode-switch-btn:hover {
+  background: var(--btn-hover-bg);
+  color: var(--ink);
+}
+
+.mode-switch-chevron {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
 .stats-disclosure {
   position: relative;
 }
@@ -2613,6 +2641,26 @@ button.scheme-btn:focus-visible {
     display: inline-flex;
   }
 
+  .skill-lang-title-row {
+    flex-wrap: nowrap;
+  }
+
+  .skill-lang-title-row .skill-lang-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Practice mode moves into a dropdown on the title line */
+  .mode-switch-btn {
+    display: inline-flex;
+  }
+
+  .mode-tabs {
+    display: none !important;
+  }
+
   .skill-lang-sub,
   .skill-tabs {
     display: none !important;
@@ -2623,6 +2671,11 @@ button.scheme-btn:focus-visible {
   }
 
   #spk-open-settings {
+    display: none !important;
+  }
+
+  /* Drawers are tabs now — hide the in-drawer close icon */
+  .drawer-close {
     display: none !important;
   }
 

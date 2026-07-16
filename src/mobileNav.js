@@ -23,6 +23,12 @@ let drawerStateGetter = null
 /** @type {PracticeSkill} */
 let currentSkill = 'typing'
 
+/** @type {SkillLang} */
+let currentLang = 'shuangpin'
+
+/** @type {null | { modes: Array<{ id: string, label: string }>, getCurrent: () => string, onSelect: (id: string) => void }} */
+let modeControl = null
+
 export function isPhoneViewport() {
   if (typeof window === 'undefined') return false
   try {
@@ -152,6 +158,7 @@ export function bindStatsDisclosure() {
  */
 export function mountMobileChrome(lang, activeSkill, hooks) {
   currentSkill = activeSkill
+  currentLang = lang
   const track = TRACKS.find((t) => t.id === lang) || TRACKS[0]
   const labels = tabLabels(lang)
 
@@ -270,6 +277,104 @@ function openLangSheet(open) {
 }
 
 /**
+ * Register the practice mode control (words / sentence / article) as a
+ * dropdown on the title line. Call once at boot; re-syncs the label if the
+ * control already exists.
+ * @param {{ modes: Array<{ id: string, label: string }>, getCurrent: () => string, onSelect: (id: string) => void }} config
+ */
+export function registerModeControl(config) {
+  modeControl = config
+  const row = document.querySelector('.skill-lang-title-row')
+  if (!row) return
+  const labels = tabLabels(currentLang)
+
+  if (!row.querySelector('#btn-mode-switch')) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.id = 'btn-mode-switch'
+    btn.className = 'mode-switch-btn'
+    btn.setAttribute('aria-haspopup', 'dialog')
+    btn.setAttribute('aria-expanded', 'false')
+    btn.innerHTML = `<span class="mode-switch-label"></span><span class="mode-switch-chevron" aria-hidden="true">▾</span>`
+    row.appendChild(btn)
+    btn.addEventListener('click', () => openModeSheet(true))
+  }
+
+  if (!document.querySelector('#mode-action-sheet')) {
+    const sheet = document.createElement('div')
+    sheet.id = 'mode-action-sheet'
+    sheet.className = 'lang-action-sheet mode-action-sheet'
+    sheet.hidden = true
+    sheet.innerHTML = `
+      <div class="lang-sheet-backdrop" data-close-mode-sheet></div>
+      <div class="lang-sheet-panel" role="dialog" aria-modal="true" aria-label="${labels.chooseMode}">
+        <div class="lang-sheet-handle" aria-hidden="true"></div>
+        <p class="lang-sheet-title">${labels.chooseMode}</p>
+        <div class="lang-sheet-list mode-sheet-list" role="listbox"></div>
+        <button type="button" class="lang-sheet-cancel" data-close-mode-sheet>${labels.cancel}</button>
+      </div>
+    `
+    document.body.appendChild(sheet)
+    sheet.querySelectorAll('[data-close-mode-sheet]').forEach((el) => {
+      el.addEventListener('click', () => openModeSheet(false))
+    })
+  }
+
+  renderModeOptions()
+  syncModeControl()
+}
+
+function renderModeOptions() {
+  const list = document.querySelector('.mode-sheet-list')
+  if (!list || !modeControl) return
+  const current = modeControl.getCurrent()
+  list.innerHTML = modeControl.modes
+    .map(
+      (m) => `
+      <button type="button" class="lang-sheet-item mode-sheet-item ${m.id === current ? 'active' : ''}" data-sheet-mode="${m.id}" role="option" aria-selected="${m.id === current}">
+        <span class="lang-sheet-copy"><span class="lang-label">${m.label}</span></span>
+      </button>`,
+    )
+    .join('')
+  list.querySelectorAll('[data-sheet-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-sheet-mode')
+      openModeSheet(false)
+      if (id && modeControl) modeControl.onSelect(id)
+    })
+  })
+}
+
+/** Update the mode button label + active option from the current mode. */
+export function syncModeControl() {
+  if (!modeControl) return
+  const current = modeControl.getCurrent()
+  const active = modeControl.modes.find((m) => m.id === current)
+  const label = document.querySelector('.mode-switch-label')
+  if (label && active) label.textContent = active.label
+  const list = document.querySelector('.mode-sheet-list')
+  if (list) {
+    list.querySelectorAll('[data-sheet-mode]').forEach((btn) => {
+      const on = btn.getAttribute('data-sheet-mode') === current
+      btn.classList.toggle('active', on)
+      btn.setAttribute('aria-selected', String(on))
+    })
+  }
+}
+
+/** @param {boolean} open */
+function openModeSheet(open) {
+  const sheet = document.querySelector('#mode-action-sheet')
+  const btn = document.querySelector('#btn-mode-switch')
+  if (!sheet) return
+  if (open) renderModeOptions()
+  sheet.hidden = !open
+  sheet.classList.toggle('is-open', open)
+  document.body.classList.toggle('lang-sheet-open', open)
+  if (btn) btn.setAttribute('aria-expanded', String(open))
+}
+
+/**
  * @param {SkillLang} lang
  * @param {string | null} tab
  * @param {(skill: PracticeSkill) => void} onSkillChange
@@ -287,7 +392,8 @@ function handleTab(lang, tab, onSkillChange) {
 
   if (tab === 'mistakes') {
     if (currentSkill === 'typing' && drawerOpener) {
-      drawerOpener('mistakes')
+      if (drawerStateGetter?.() === 'mistakes' && drawerCloser) drawerCloser()
+      else drawerOpener('mistakes')
       syncBottomTabActive()
       return
     }
@@ -298,7 +404,8 @@ function handleTab(lang, tab, onSkillChange) {
 
   if (tab === 'settings') {
     if (drawerOpener) {
-      drawerOpener('settings')
+      if (drawerStateGetter?.() === 'settings' && drawerCloser) drawerCloser()
+      else drawerOpener('settings')
       syncBottomTabActive()
       return
     }
@@ -330,6 +437,7 @@ function tabLabels(lang) {
       mistakes: 'ミス帳',
       settings: '設定',
       chooseLanguage: '言語を選択',
+      chooseMode: '練習モード',
       cancel: 'キャンセル',
       nav: 'メインナビ',
     }
@@ -341,6 +449,7 @@ function tabLabels(lang) {
       mistakes: 'Mistakes',
       settings: 'Settings',
       chooseLanguage: 'Choose language',
+      chooseMode: 'Practice mode',
       cancel: 'Cancel',
       nav: 'Main',
     }
@@ -351,6 +460,7 @@ function tabLabels(lang) {
     mistakes: '错字本',
     settings: '设置',
     chooseLanguage: '选择语言',
+    chooseMode: '练习模式',
     cancel: '取消',
     nav: '主导航',
   }
