@@ -9,6 +9,8 @@
 export function shouldHideKeyboardByDefault() {
   if (typeof window === 'undefined') return false
   try {
+    // Phone-first: narrow viewports always start with keyboard hidden.
+    if (window.matchMedia('(max-width: 720px)').matches) return true
     const compact = window.matchMedia(
       [
         '(max-width: 900px)',

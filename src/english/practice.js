@@ -1270,7 +1270,7 @@ export function bootEnglish(root) {
           <nav class="mode-tabs" aria-label="Practice mode">${modeButtons}</nav>
           <span class="scheme">QWERTY</span>
         </div>
-        <div class="top-actions">
+        <div class="top-actions top-actions-meta">
           <button type="button" class="ghost-chip" id="btn-open-mistakes">Mistakes${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
           <button type="button" class="ghost-chip" id="btn-open-settings">Settings</button>
         </div>

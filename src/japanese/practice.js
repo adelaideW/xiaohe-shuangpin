@@ -1241,7 +1241,7 @@ export function bootJapanese(root) {
           <nav class="mode-tabs">${modeButtons}</nav>
           <span class="scheme">Romaji · ひらがな</span>
         </div>
-        <div class="top-actions">
+        <div class="top-actions top-actions-meta">
           <button type="button" class="ghost-chip" id="btn-open-mistakes">ミス帳${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
           <button type="button" class="ghost-chip" id="btn-open-settings">設定</button>
         </div>

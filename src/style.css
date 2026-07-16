@@ -1158,6 +1158,9 @@ button.scheme-btn:focus-visible {
   .topbar {
     flex-direction: column;
     align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 0.45rem;
+    padding: 0.65rem 0.85rem 0.35rem;
   }
 
   .brand {
@@ -1166,14 +1169,87 @@ button.scheme-btn:focus-visible {
 
   .brand.brand-modes {
     justify-content: flex-start;
+    width: 100%;
   }
 
   .mode-tabs {
     justify-content: flex-start;
   }
 
+  .top-actions,
+  .top-actions.top-actions-meta {
+    width: 100%;
+    justify-content: flex-start;
+    order: 2;
+  }
+
+  .brand.brand-modes {
+    order: 1;
+  }
+
   .stats {
     grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+    padding: 0 0.85rem;
+  }
+
+  .stat {
+    padding: 0.45rem 0.5rem;
+  }
+
+  .stat .value {
+    font-size: 1rem;
+  }
+
+  .timer-bar {
+    padding: 0 0.85rem;
+  }
+
+  .timer-bar-inner {
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .timer-left .timer-label {
+    display: none;
+  }
+
+  /* Req 2: no duration suggestion chips — number input only */
+  .dur-group .dur-btn {
+    display: none;
+  }
+
+  .dur-group {
+    flex-wrap: nowrap;
+  }
+
+  .main {
+    padding: 0.55rem 0.85rem 1rem;
+    gap: 0.55rem;
+  }
+
+  .practice-card {
+    padding: 0.75rem 0.7rem 0.65rem;
+    min-height: 0;
+  }
+
+  .hints-row-bottom {
+    display: none;
+  }
+
+  .footer-note {
+    padding-bottom: 0.75rem;
+    font-size: 0.7rem;
+  }
+
+  /* Req 1: covered keyboard takes no vertical space */
+  .keyboard-wrap:has(.keyboard.covered) {
+    display: none;
+  }
+
+  .keyboard.covered {
+    display: none;
   }
 
   .kb-row:nth-child(2),
@@ -1185,12 +1261,60 @@ button.scheme-btn:focus-visible {
   .key .k-final {
     display: none;
   }
+
+  /* Req 4 base: keep toolbar actions visible; wrap on very small phones */
+  .toolbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    overflow: visible;
+    gap: 0.35rem;
+  }
+
+  .toolbar > button {
+    font-size: 0.78rem;
+    height: 1.85rem;
+    padding: 0 0.55rem;
+  }
+
+  .passage-meta,
+  .passage-title-row {
+    gap: 0.35rem;
+  }
+
+  .passage-title-row .title {
+    font-size: 0.9rem;
+  }
+}
+
+/* iPhone-14-class phones: one-row toolbar without horizontal scroll */
+@media (min-width: 393px) and (min-height: 852px) and (max-width: 720px) {
+  .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: visible;
+  }
+
+  .toolbar > button {
+    font-size: 0.76rem;
+    padding: 0 0.5rem;
+    height: 1.8rem;
+  }
+
+  /* Chinese has an extra hints button — keep core four compact; allow slight shrink */
+  .toolbar > button#btn-hints {
+    font-size: 0.72rem;
+    padding: 0 0.4rem;
+  }
 }
 
 .top-actions {
   display: flex;
   gap: 0.4rem;
   flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.top-actions.top-actions-meta {
+  align-items: center;
 }
 
 .ghost-chip {
@@ -1451,17 +1575,6 @@ button.scheme-btn:focus-visible {
   color: var(--muted);
   background: transparent;
   padding-left: 0;
-}
-
-@media (max-width: 720px) {
-  .topbar {
-    flex-wrap: wrap;
-  }
-
-  .top-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
 }
 
 .english-passage {

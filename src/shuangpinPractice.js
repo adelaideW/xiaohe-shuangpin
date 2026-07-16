@@ -1537,7 +1537,7 @@ function render() {
         <nav class="mode-tabs" aria-label="练习模式">${modeButtons}</nav>
         <button type="button" class="scheme scheme-btn" id="btn-cycle-scheme" title="点击切换输入方案">${getSchemeLabel(settings.scheme)}</button>
       </div>
-      <div class="top-actions">
+      <div class="top-actions top-actions-meta">
         <button type="button" class="ghost-chip" id="btn-open-mistakes">错字本${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
         <button type="button" class="ghost-chip" id="btn-open-settings">设置</button>
       </div>
