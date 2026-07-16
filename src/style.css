@@ -3024,7 +3024,7 @@ button.scheme-btn:focus-visible {
     display: none;
   }
 
-  /* Feedback slides up above the floating mic + bottom tabs */
+  /* Feedback slides up flush with the bottom tab bar; mic hides while open */
   .spk-feedback-sheet {
     display: block;
     position: fixed;
@@ -3055,8 +3055,8 @@ button.scheme-btn:focus-visible {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: calc(5.6rem + env(safe-area-inset-bottom, 0px));
-    max-height: min(58vh, 28rem);
+    bottom: calc(3.4rem + env(safe-area-inset-bottom, 0px));
+    max-height: min(52vh, 24rem);
     overflow-x: hidden;
     overflow-y: auto;
     padding: 0.55rem 0.95rem 1rem;
@@ -3064,12 +3064,20 @@ button.scheme-btn:focus-visible {
     border-radius: 18px 18px 0 0;
     box-shadow: 0 -12px 40px rgba(20, 28, 36, 0.18);
     transform: translateY(110%);
-    transition: transform 0.22s ease;
+    transition: transform 0.22s ease, top 0.22s ease, max-height 0.22s ease;
     -webkit-overflow-scrolling: touch;
   }
 
   .spk-feedback-sheet.is-open .spk-feedback-sheet-panel {
     transform: translateY(0);
+  }
+
+  .spk-feedback-sheet.is-expanded .spk-feedback-sheet-panel {
+    top: 16px;
+    bottom: calc(3.4rem + env(safe-area-inset-bottom, 0px));
+    max-height: none;
+    height: auto;
+    border-radius: 18px 18px 0 0;
   }
 
   .spk-feedback-sheet-handle {
@@ -3125,8 +3133,9 @@ button.scheme-btn:focus-visible {
     justify-content: center;
   }
 
-  body.spk-feedback-sheet-open .spk-mic {
-    z-index: 75;
+  body.spk-feedback-sheet-open .spk-mic,
+  body.spk-feedback-sheet-open .spk-mic-block {
+    display: none !important;
   }
 
   .spk-icon-nav:disabled {

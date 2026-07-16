@@ -779,7 +779,7 @@ export function bootSpeaking(root, opts) {
     }
 
     return `
-      <div class="spk-feedback-sheet ${open ? 'is-open' : ''}" id="spk-feedback-sheet" ${open ? '' : 'hidden'}>
+      <div class="spk-feedback-sheet ${open ? 'is-open' : ''} ${state.feedbackSheetExpanded ? 'is-expanded' : ''}" id="spk-feedback-sheet" ${open ? '' : 'hidden'}>
         <div class="spk-feedback-sheet-backdrop" data-close-feedback-sheet></div>
         <div class="spk-feedback-sheet-panel" role="dialog" aria-label="${t('Feedback', 'フィードバック', '反馈')}">
           <div class="spk-feedback-sheet-handle" aria-hidden="true"></div>
@@ -1132,6 +1132,18 @@ export function bootSpeaking(root, opts) {
     }
   }
 
+  function startRecordingFromSheet() {
+    if (!recognizer.supported) return
+    requestAnimationFrame(() => {
+      if (state.listening) return
+      stopArticle()
+      state.gradeError = ''
+      recognizer.reset()
+      recognizer.start()
+      patchLive()
+    })
+  }
+
   function bindListen() {
     root.querySelector('#spk-play')?.addEventListener('click', playArticle)
     root.querySelector('#spk-pause')?.addEventListener('click', pauseArticle)
@@ -1221,17 +1233,14 @@ export function bootSpeaking(root, opts) {
       state.transcript = ''
       recognizer.reset()
       render()
-      if (recognizer.supported) {
-        requestAnimationFrame(() => {
-          recognizer.start()
-          patchLive()
-        })
-      }
+      startRecordingFromSheet()
     })
     root.querySelector('#spk-feedback-next')?.addEventListener('click', () => {
       state.feedbackSheetOpen = false
       state.feedbackSheetExpanded = false
+      stopArticle()
       setIndex(state.index + 1)
+      startRecordingFromSheet()
     })
     root.querySelector('#spk-manual')?.addEventListener('input', (e) => {
       state.manualText = e.target.value
