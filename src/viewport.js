@@ -79,15 +79,33 @@ export function installViewportKeyboardSync(explicitStorageKey, getCovered, setC
 }
 
 /**
- * Track visual viewport while typing on phone. Focus-window rendering owns the
- * article slice; this only tucks the bottom nav when the system keyboard opens
- * so chrome doesn’t jump dramatically.
+ * Immersive mobile typing: when the system keyboard is open, pin the practice
+ * card to the visual viewport and hide timer / stats / skill chrome so the
+ * article and typing controls get the full visible area.
+ * When the keyboard closes, scroll back to the practice / current character
+ * so the layout doesn't jump to the timer/stats header.
  */
 export function installMobileTypingViewportSync() {
   if (typeof window === 'undefined') return () => {}
   const vv = window.visualViewport
   const root = document.documentElement
   const mobileMq = window.matchMedia('(max-width: 573px)')
+  let wasOpen = false
+
+  const restoreTypingFocus = () => {
+    const card = document.querySelector('.practice-card')
+    if (!card) return
+    // Bring the typing card into view first (timer/stats scroll away above).
+    card.scrollIntoView({ block: 'start', inline: 'nearest' })
+    const current = document.querySelector(
+      '.passage-scroll .ch.current, .passage-scroll .jp-seg.current, .passage-scroll .current',
+    )
+    const chrome = document.querySelector('.typing-chrome')
+    const target = current || chrome
+    if (target) {
+      target.scrollIntoView({ block: 'center', inline: 'nearest' })
+    }
+  }
 
   const sync = () => {
     const mirror = document.querySelector('#key-mirror')
@@ -101,6 +119,22 @@ export function installMobileTypingViewportSync() {
     root.style.setProperty('--mobile-vv-top', `${Math.round(offsetTop)}px`)
     root.style.setProperty('--mobile-keyboard-inset', `${Math.round(keyboardInset)}px`)
     document.body.classList.toggle('mobile-typing-keyboard-open', keyboardOpen)
+
+    if (keyboardOpen && !wasOpen) {
+      window.scrollTo(0, 0)
+      // Keep the focused mirror from letting iOS scroll chrome back into view.
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0)
+        document.querySelector('.practice-card')?.scrollIntoView({ block: 'start', inline: 'nearest' })
+      })
+    } else if (!keyboardOpen && wasOpen) {
+      // Fixed → flow layout just reflowed; wait for layout + keyboard settle.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(restoreTypingFocus)
+      })
+      window.setTimeout(restoreTypingFocus, 200)
+    }
+    wasOpen = keyboardOpen
   }
 
   const rafSync = () => requestAnimationFrame(sync)
