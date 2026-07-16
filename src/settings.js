@@ -3,8 +3,10 @@
  */
 
 import { DEFAULT_SPEAK_LIMIT, normalizeSpeakLimitSettings } from './speaking/length.js'
+import { markKeyboardPreferenceExplicit, resolveKeyboardCovered } from './viewport.js'
 
 const STORAGE_KEY = 'xiaohe-settings'
+export const ZH_KEYBOARD_EXPLICIT_KEY = 'xiaohe-kb-explicit'
 
 /** @typedef {'xiaohe' | 'ziranma' | 'sogou' | 'quanpin'} SchemeId */
 /** @typedef {'auto' | 'manual' | 'off'} TimerMode */
@@ -71,6 +73,7 @@ export function loadSettings() {
     base.charsPerPage = Math.max(20, Math.min(300, Number(base.charsPerPage) || 80))
     if (!['auto', 'manual', 'off'].includes(base.timerMode)) base.timerMode = 'auto'
     if (!['xiaohe', 'ziranma', 'sogou', 'quanpin'].includes(base.scheme)) base.scheme = 'xiaohe'
+    base.keyboardCovered = resolveKeyboardCovered(base.keyboardCovered, ZH_KEYBOARD_EXPLICIT_KEY)
     Object.assign(base, normalizeSpeakLimitSettings(base, 'zh'))
     // One-time: product default for “有错字时也自动下一篇” flipped on
     if (!localStorage.getItem('xiaohe-mig-autoAdvMistakes-on')) {
@@ -84,12 +87,18 @@ export function loadSettings() {
     }
     return base
   } catch {
-    return { ...DEFAULT_SETTINGS }
+    return {
+      ...DEFAULT_SETTINGS,
+      keyboardCovered: resolveKeyboardCovered(false, ZH_KEYBOARD_EXPLICIT_KEY),
+    }
   }
 }
 
 /** @param {Partial<Settings>} patch */
 export function saveSettings(patch) {
+  if (Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered')) {
+    markKeyboardPreferenceExplicit(ZH_KEYBOARD_EXPLICIT_KEY)
+  }
   const next = { ...loadSettings(), ...patch }
   Object.assign(next, normalizeSpeakLimitSettings(next, 'zh'))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next))

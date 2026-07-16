@@ -3,8 +3,10 @@
  */
 
 import { DEFAULT_SPEAK_LIMIT, normalizeSpeakLimitSettings } from '../speaking/length.js'
+import { markKeyboardPreferenceExplicit, resolveKeyboardCovered } from '../viewport.js'
 
 const STORAGE_KEY = 'english-settings'
+export const EN_KEYBOARD_EXPLICIT_KEY = 'english-kb-explicit'
 
 /** @typedef {'auto' | 'manual' | 'off'} TimerMode */
 /** @typedef {'time' | 'count'} SpeakLimitMode */
@@ -69,23 +71,25 @@ export function loadEnglishSettings() {
         /* ignore */
       }
     }
+    // Legacy flag: previously forced keyboard visible. Compact screens now hide by default.
     if (!localStorage.getItem('english-mig-kb-shown')) {
-      base.keyboardCovered = false
       localStorage.setItem('english-mig-kb-shown', '1')
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
-      } catch {
-        /* ignore */
-      }
     }
+    base.keyboardCovered = resolveKeyboardCovered(base.keyboardCovered, EN_KEYBOARD_EXPLICIT_KEY)
     return base
   } catch {
-    return { ...DEFAULT_ENGLISH_SETTINGS }
+    return {
+      ...DEFAULT_ENGLISH_SETTINGS,
+      keyboardCovered: resolveKeyboardCovered(false, EN_KEYBOARD_EXPLICIT_KEY),
+    }
   }
 }
 
 /** @param {Partial<EnglishSettings>} patch */
 export function saveEnglishSettings(patch) {
+  if (Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered')) {
+    markKeyboardPreferenceExplicit(EN_KEYBOARD_EXPLICIT_KEY)
+  }
   const next = { ...loadEnglishSettings(), ...patch }
   Object.assign(next, normalizeSpeakLimitSettings(next, 'en'))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next))

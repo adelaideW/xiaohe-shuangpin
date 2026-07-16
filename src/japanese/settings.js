@@ -3,8 +3,10 @@
  */
 
 import { DEFAULT_SPEAK_LIMIT, normalizeSpeakLimitSettings } from '../speaking/length.js'
+import { markKeyboardPreferenceExplicit, resolveKeyboardCovered } from '../viewport.js'
 
 const STORAGE_KEY = 'japanese-settings'
+export const JA_KEYBOARD_EXPLICIT_KEY = 'japanese-kb-explicit'
 
 /** @typedef {'auto' | 'manual' | 'off'} TimerMode */
 /** @typedef {'time' | 'count'} SpeakLimitMode */
@@ -57,15 +59,9 @@ export function loadJapaneseSettings() {
     if (!['auto', 'manual', 'off'].includes(base.timerMode)) base.timerMode = 'auto'
     Object.assign(base, normalizeSpeakLimitSettings(base, 'ja'))
     base.speakShowHiragana = Boolean(base.speakShowHiragana)
-    // One-time: show keyboard by default for Japanese (hiragana labels)
+    // Legacy flag: previously forced keyboard visible. Compact screens now hide by default.
     if (!localStorage.getItem('japanese-mig-kb-shown')) {
-      base.keyboardCovered = false
       localStorage.setItem('japanese-mig-kb-shown', '1')
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
-      } catch {
-        /* ignore */
-      }
     }
     // One-time: furigana / hiragana-over-kanji on by default for first visit
     if (!localStorage.getItem('japanese-mig-furi-default-on')) {
@@ -77,14 +73,21 @@ export function loadJapaneseSettings() {
         /* ignore */
       }
     }
+    base.keyboardCovered = resolveKeyboardCovered(base.keyboardCovered, JA_KEYBOARD_EXPLICIT_KEY)
     return base
   } catch {
-    return { ...DEFAULT_JAPANESE_SETTINGS }
+    return {
+      ...DEFAULT_JAPANESE_SETTINGS,
+      keyboardCovered: resolveKeyboardCovered(false, JA_KEYBOARD_EXPLICIT_KEY),
+    }
   }
 }
 
 /** @param {Partial<JapaneseSettings>} patch */
 export function saveJapaneseSettings(patch) {
+  if (Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered')) {
+    markKeyboardPreferenceExplicit(JA_KEYBOARD_EXPLICIT_KEY)
+  }
   const next = { ...loadJapaneseSettings(), ...patch }
   Object.assign(next, normalizeSpeakLimitSettings(next, 'ja'))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
