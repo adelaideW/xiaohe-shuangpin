@@ -2,6 +2,8 @@
  * Typing ↔ Speaking skill switch (GitHub-style underline tabs).
  */
 
+import { mountMobileChrome } from './mobileNav.js'
+
 /** @typedef {'typing' | 'speaking'} PracticeSkill */
 /** @typedef {'english' | 'japanese' | 'shuangpin'} SkillLang */
 
@@ -73,7 +75,9 @@ export function mountSkillShell(practiceRoot, lang, active) {
     <div class="skill-shell">
       <div class="skill-sticky-head">
         <header class="skill-lang-head">
-          <h1 class="skill-lang-title">${meta.title}</h1>
+          <div class="skill-lang-title-row">
+            <h1 class="skill-lang-title">${meta.title}</h1>
+          </div>
           <p class="skill-lang-sub">${meta.sub}</p>
         </header>
         <nav class="skill-tabs" role="tablist" aria-label="${meta.tablist}">
@@ -98,6 +102,13 @@ export function mountSkillShell(practiceRoot, lang, active) {
       saveSkill(lang, skill)
       location.reload()
     })
+  })
+
+  mountMobileChrome(lang, active, {
+    onSkillChange: (skill) => {
+      saveSkill(lang, skill)
+      location.reload()
+    },
   })
 
   return /** @type {HTMLElement} */ (practiceRoot.querySelector('#skill-root'))

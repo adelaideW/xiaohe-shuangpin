@@ -31,6 +31,14 @@ import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
 import { speakBudgetFromMinutes } from './speaking/length.js'
 import { installViewportKeyboardSync } from './viewport.js'
 import { speakText } from './speaking/speech.js'
+import {
+  bindStatsDisclosure,
+  consumePendingDrawer,
+  patchStatsSummary,
+  registerDrawerHandlers,
+  syncBottomTabActive,
+  wrapCollapsibleStats,
+} from './mobileNav.js'
 
 function escapeHtml(s) {
   return String(s)
@@ -779,6 +787,7 @@ function patchStats() {
   values[3].textContent = `${accuracy()}%`
   values[4].textContent = String(state.startedAt ? cpm() : 0)
   values[5].textContent = String(state.startedAt ? kpm() : 0)
+  patchStatsSummary()
 }
 
 function patchCodeSlots() {
@@ -1034,12 +1043,14 @@ function openDrawer(name) {
   state.drawer = name
   state.drawerJustOpened = true
   render()
+  syncBottomTabActive()
 }
 
 function closeDrawer() {
   state.drawer = null
   render()
   focusApp()
+  syncBottomTabActive()
 }
 
 function formatAgo(ts) {
@@ -1289,7 +1300,7 @@ function renderTimerBar() {
 }
 
 function renderStats() {
-  return `
+  const stats = `
     <div class="stats">
       <div class="stat"><span class="label">已练</span><span class="value">${state.correct}</span></div>
       <div class="stat"><span class="label">连击</span><span class="value">${state.combo}</span></div>
@@ -1299,6 +1310,12 @@ function renderStats() {
       <div class="stat"><span class="label">键/分</span><span class="value">${state.startedAt ? kpm() : 0}</span></div>
     </div>
   `
+  return wrapCollapsibleStats(stats, {
+    storageKey: 'shuangpin-stats-collapsed',
+    summaryLabels: { streak: '连击', accuracy: '准确率' },
+    streakValue: state.combo,
+    accuracyValue: `${accuracy()}%`,
+  })
 }
 
 function renderKeyboard() {
@@ -1578,6 +1595,7 @@ function render() {
   `
 
   bindEvents()
+  bindStatsDisclosure()
   state.drawerJustOpened = false
   requestAnimationFrame(() => {
     document.querySelector('.practice-card')?.classList.remove('enter')
@@ -1868,6 +1886,15 @@ export function bootShuangpin(root) {
   else startPassage(state.mode)
 
   render()
+
+  registerDrawerHandlers({
+    open: (name) => openDrawer(name),
+    close: () => closeDrawer(),
+    getOpen: () => state.drawer,
+  })
+
+  const pending = consumePendingDrawer()
+  if (pending) openDrawer(pending)
 
   installViewportKeyboardSync(
     ZH_KEYBOARD_EXPLICIT_KEY,

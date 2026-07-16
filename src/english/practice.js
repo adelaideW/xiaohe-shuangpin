@@ -35,6 +35,14 @@ import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText } from '../speaking/speech.js'
 import { installViewportKeyboardSync } from '../viewport.js'
+import {
+  bindStatsDisclosure,
+  consumePendingDrawer,
+  patchStatsSummary,
+  registerDrawerHandlers,
+  syncBottomTabActive,
+  wrapCollapsibleStats,
+} from '../mobileNav.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -754,12 +762,14 @@ export function bootEnglish(root) {
     state.drawer = name
     state.drawerJustOpened = true
     render()
+    syncBottomTabActive()
   }
 
   function closeDrawer() {
     state.drawer = null
     render()
     focusApp()
+    syncBottomTabActive()
   }
 
   function scrollCurrentIntoView() {
@@ -843,6 +853,7 @@ export function bootEnglish(root) {
     values[3].textContent = `${accuracy()}%`
     values[4].textContent = String(state.startedAt ? wpm() : 0)
     values[5].textContent = String(state.keystrokes)
+    patchStatsSummary()
   }
 
   function expectedKeyLabel() {
@@ -959,7 +970,7 @@ export function bootEnglish(root) {
   }
 
   function renderStats() {
-    return `
+    const stats = `
       <div class="stats">
         <div class="stat"><span class="label">Correct</span><span class="value">${state.correct}</span></div>
         <div class="stat"><span class="label">Streak</span><span class="value">${state.combo}</span></div>
@@ -969,6 +980,12 @@ export function bootEnglish(root) {
         <div class="stat"><span class="label">Keystrokes</span><span class="value">${state.keystrokes}</span></div>
       </div>
     `
+    return wrapCollapsibleStats(stats, {
+      storageKey: 'english-stats-collapsed',
+      summaryLabels: { streak: 'Streak', accuracy: 'Accuracy' },
+      streakValue: state.combo,
+      accuracyValue: `${accuracy()}%`,
+    })
   }
 
   function renderSessionSummary() {
@@ -1318,6 +1335,7 @@ export function bootEnglish(root) {
     `
 
     bindEvents()
+    bindStatsDisclosure()
     state.drawerJustOpened = false
     requestAnimationFrame(() => {
       document.querySelector('.practice-card')?.classList.remove('enter')
@@ -1546,6 +1564,15 @@ export function bootEnglish(root) {
   state.remainingMs = state.durationMinutes * 60 * 1000
   startPassage(state.mode)
   render()
+
+  registerDrawerHandlers({
+    open: (name) => openDrawer(name),
+    close: () => closeDrawer(),
+    getOpen: () => state.drawer,
+  })
+
+  const pending = consumePendingDrawer()
+  if (pending) openDrawer(pending)
 
   installViewportKeyboardSync(
     EN_KEYBOARD_EXPLICIT_KEY,

@@ -36,6 +36,14 @@ import { enrichPassageWithReadings } from '../speaking/furigana.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText } from '../speaking/speech.js'
 import { installViewportKeyboardSync } from '../viewport.js'
+import {
+  bindStatsDisclosure,
+  consumePendingDrawer,
+  patchStatsSummary,
+  registerDrawerHandlers,
+  syncBottomTabActive,
+  wrapCollapsibleStats,
+} from '../mobileNav.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -774,12 +782,14 @@ export function bootJapanese(root) {
     state.drawer = name
     state.drawerJustOpened = true
     render()
+    syncBottomTabActive()
   }
 
   function closeDrawer() {
     state.drawer = null
     render()
     focusApp()
+    syncBottomTabActive()
   }
 
   function patchStats() {
@@ -791,6 +801,7 @@ export function bootJapanese(root) {
     values[3].textContent = `${accuracy()}%`
     values[4].textContent = String(state.startedAt ? cpm() : 0)
     values[5].textContent = String(state.keystrokes)
+    patchStatsSummary()
   }
 
   function patchLive() {
@@ -900,7 +911,7 @@ export function bootJapanese(root) {
   }
 
   function renderStats() {
-    return `
+    const stats = `
       <div class="stats">
         <div class="stat"><span class="label">正解</span><span class="value">${state.correct}</span></div>
         <div class="stat"><span class="label">連打</span><span class="value">${state.combo}</span></div>
@@ -909,6 +920,12 @@ export function bootJapanese(root) {
         <div class="stat"><span class="label">単位/分</span><span class="value">${state.startedAt ? cpm() : 0}</span></div>
         <div class="stat"><span class="label">打鍵</span><span class="value">${state.keystrokes}</span></div>
       </div>`
+    return wrapCollapsibleStats(stats, {
+      storageKey: 'japanese-stats-collapsed',
+      summaryLabels: { streak: '連打', accuracy: '正確率' },
+      streakValue: state.combo,
+      accuracyValue: `${accuracy()}%`,
+    })
   }
 
   function renderWordStage() {
@@ -1272,6 +1289,7 @@ export function bootJapanese(root) {
       ${state.drawer ? `<div class="drawer-backdrop" id="drawer-backdrop"></div>${drawer}` : ''}
     `
     bindEvents()
+    bindStatsDisclosure()
     state.drawerJustOpened = false
     requestAnimationFrame(() => {
       document.querySelector('.practice-card')?.classList.remove('enter')
@@ -1483,6 +1501,15 @@ export function bootJapanese(root) {
     focusApp()
   })
   render()
+
+  registerDrawerHandlers({
+    open: (name) => openDrawer(name),
+    close: () => closeDrawer(),
+    getOpen: () => state.drawer,
+  })
+
+  const pending = consumePendingDrawer()
+  if (pending) openDrawer(pending)
 
   installViewportKeyboardSync(
     JA_KEYBOARD_EXPLICIT_KEY,
