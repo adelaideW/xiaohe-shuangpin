@@ -25,7 +25,8 @@ import {
   clearEnglishMistakes,
   summarizeEnglishMistakes,
   smartEnglishWordPool,
-  wordAroundIndex,
+  uniqueEnglishMistakeWords,
+  wordSpanAroundIndex,
 } from './mistakes.js'
 import { loadEnglishLibrary, addEnglishDoc, removeEnglishDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
@@ -187,6 +188,7 @@ export function bootEnglish(root) {
     lastWrong: false,
     mistakesOnly: false,
     mistakeIndex: -1,
+    recordedMistakeWordSpans: new Set(),
   }
 
   let tickHandle = null
@@ -456,7 +458,7 @@ export function bootEnglish(root) {
   function pickPassage(mode) {
     if (mode === 'word') {
       if (state.mistakesOnly) {
-        const words = [...new Set(loadEnglishMistakes().map((m) => String(m.word || m.expected || '').trim()).filter(Boolean))]
+        const words = uniqueEnglishMistakeWords()
         if (words.length) {
           state.mistakeIndex = (state.mistakeIndex + 1) % words.length
           return { title: 'Mistakes', text: words[state.mistakeIndex] }
@@ -485,6 +487,7 @@ export function bootEnglish(root) {
     state.passageWrong = 0
     state.autoAdvanceNote = ''
     state.lastWrong = false
+    state.recordedMistakeWordSpans = new Set()
   }
 
   function startPassage(mode, { pushHistory = true } = {}) {
@@ -728,14 +731,18 @@ export function bootEnglish(root) {
       !isTypablePunct(target.char) &&
       !isTypableSpace(target.char)
     ) {
-      const word = wordAroundIndex(state.passage.text, target.index)
-      recordEnglishMistake({
-        word,
-        char: target.char === ' ' ? '␣' : target.char,
-        expected: word,
-        typed: typed === ' ' ? 'space' : typed,
-        mode: state.mode,
-      })
+      const span = wordSpanAroundIndex(state.passage.text, target.index)
+      const key = `${span.word.toLowerCase()}|${span.start}|${span.end}`
+      if (span.word && !state.recordedMistakeWordSpans.has(key)) {
+        state.recordedMistakeWordSpans.add(key)
+        recordEnglishMistake({
+          word: span.word,
+          char: span.word,
+          expected: span.word,
+          typed: typed === ' ' ? 'space' : typed,
+          mode: state.mode,
+        })
+      }
     }
     state.wrong += 1
     state.passageWrong += 1

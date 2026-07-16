@@ -40,17 +40,28 @@ function save(list) {
  * @param {number} charIndex
  */
 export function wordAroundIndex(text, charIndex) {
+  return wordSpanAroundIndex(text, charIndex).word
+}
+
+/**
+ * Extract the word and source span around a character index.
+ * @param {string} text
+ * @param {number} charIndex
+ */
+export function wordSpanAroundIndex(text, charIndex) {
   const chars = [...String(text || '')]
-  if (!chars.length || charIndex < 0 || charIndex >= chars.length) return ''
+  if (!chars.length || charIndex < 0 || charIndex >= chars.length) {
+    return { word: '', start: -1, end: -1 }
+  }
   const ch = chars[charIndex]
   if (!/[A-Za-z0-9']/.test(ch)) {
-    return ch === ' ' ? '␣' : ch
+    return { word: ch === ' ' ? '␣' : ch, start: charIndex, end: charIndex }
   }
   let start = charIndex
   let end = charIndex
   while (start > 0 && /[A-Za-z0-9']/.test(chars[start - 1])) start -= 1
   while (end < chars.length - 1 && /[A-Za-z0-9']/.test(chars[end + 1])) end += 1
-  return chars.slice(start, end + 1).join('')
+  return { word: chars.slice(start, end + 1).join(''), start, end }
 }
 
 /** @param {Omit<EnglishMistake, 'at'> & { word?: string }} event */
@@ -67,6 +78,23 @@ export function recordEnglishMistake(event) {
   })
   save(list)
   return list
+}
+
+/**
+ * @param {EnglishMistake[]} [mistakes]
+ */
+export function uniqueEnglishMistakeWords(mistakes = loadEnglishMistakes()) {
+  const words = []
+  const seen = new Set()
+  for (const m of mistakes) {
+    const word = String(m.word || m.expected || m.char || '').trim()
+    if (!word || word === '␣') continue
+    const key = word.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    words.push(word)
+  }
+  return words
 }
 
 export function clearEnglishMistakes() {
