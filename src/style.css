@@ -608,6 +608,17 @@ button.scheme-btn:focus-visible {
   min-height: 1.4em;
 }
 
+.passage-stage .pinyin-line {
+  letter-spacing: 0.04em;
+}
+
+.pinyin-line .hint-current-letter {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
 .code-progress {
   display: flex;
   gap: 0.4rem;

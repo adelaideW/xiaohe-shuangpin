@@ -770,8 +770,13 @@ export function bootEnglish(root) {
     }
     const hint = document.querySelector('.pinyin-line')
     if (hint) {
-      const t = currentTarget()
-      hint.textContent = t ? displayChar(t.char) : ''
+      // Sentence/article: whole-word suggestion; word mode keeps single-letter cue.
+      if (state.mode === 'word') {
+        const t = currentTarget()
+        hint.textContent = t ? displayChar(t.char) : ''
+      } else {
+        hint.innerHTML = suggestionHintHtml()
+      }
     }
     patchKeyboardHints()
     patchStats()
@@ -782,6 +787,33 @@ export function bootEnglish(root) {
     if (ch === ' ') return 'space'
     if (ch === '\n') return '↵'
     return ch
+  }
+
+  /**
+   * Bottom suggestion for sentence/article: the whole word (current letter marked),
+   * while keyboard hints stay on the single expected key.
+   */
+  function suggestionHintHtml() {
+    const t = currentTarget()
+    if (!t || !state.passage) return ''
+    const ch = t.char
+    if (isTypableSpace(ch) || ch === ' ') return 'space'
+    if (isTypablePunct(ch) || ch === '\n') return escapeHtml(displayChar(ch))
+    if (!/[A-Za-z0-9']/.test(ch)) return escapeHtml(displayChar(ch))
+
+    const chars = [...state.passage.text]
+    let start = t.index
+    let end = t.index
+    while (start > 0 && /[A-Za-z0-9']/.test(chars[start - 1])) start -= 1
+    while (end < chars.length - 1 && /[A-Za-z0-9']/.test(chars[end + 1])) end += 1
+    const wordChars = chars.slice(start, end + 1)
+    const offset = t.index - start
+    return wordChars
+      .map((c, i) => {
+        const safe = escapeHtml(c)
+        return i === offset ? `<span class="hint-current-letter">${safe}</span>` : safe
+      })
+      .join('')
   }
 
   function patchStats() {
@@ -1003,7 +1035,6 @@ export function bootEnglish(root) {
     const multiPage = state.pages.length > 1
     const progress = `${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · err ${state.passageWrong}` : ''}`
     const canPrev = state.historyIndex > 0
-    const t = currentTarget()
 
     return `
       <div class="char-stage passage-stage">
@@ -1036,7 +1067,7 @@ export function bootEnglish(root) {
           <div class="passage english-passage">${chars}</div>
         </div>
         <div class="typing-chrome">
-          <div class="pinyin-line">${t ? displayChar(t.char) : ''}</div>
+          <div class="pinyin-line">${suggestionHintHtml()}</div>
         </div>
         ${state.uploadMessage ? `<p class="upload-msg">${escapeHtml(state.uploadMessage)}</p>` : ''}
       </div>
