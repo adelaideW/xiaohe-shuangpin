@@ -36,6 +36,8 @@ import { speakText } from '../speaking/speech.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
+const STORAGE_RECENT_SENTENCES = 'english-recent-sentences'
+const SENTENCE_REPEAT_WINDOW = 30
 
 const MODES = [
   { id: 'word', label: 'Words' },
@@ -66,6 +68,43 @@ function shufflePick(list, avoid) {
     guard += 1
   } while (avoid && item === avoid && guard < 20)
   return item
+}
+
+function loadRecentSentences() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_RECENT_SENTENCES) || '[]')
+    return Array.isArray(parsed)
+      ? parsed.filter((text) => typeof text === 'string').slice(-SENTENCE_REPEAT_WINDOW)
+      : []
+  } catch {
+    return []
+  }
+}
+
+function rememberSentence(text) {
+  const recent = loadRecentSentences().filter((item) => item !== text)
+  recent.push(text)
+  try {
+    localStorage.setItem(
+      STORAGE_RECENT_SENTENCES,
+      JSON.stringify(recent.slice(-SENTENCE_REPEAT_WINDOW)),
+    )
+  } catch {
+    /* Practice still works when storage is unavailable. */
+  }
+}
+
+function pickSentence() {
+  const recent = new Set(loadRecentSentences())
+  let candidates = ENGLISH_SENTENCES.filter((sentence) => !recent.has(sentence.text))
+  // Defensive fallback if the content bank ever becomes smaller than the window.
+  if (!candidates.length) {
+    const oldest = loadRecentSentences()[0]
+    candidates = ENGLISH_SENTENCES.filter((sentence) => sentence.text === oldest)
+  }
+  const picked = shufflePick(candidates, null)
+  if (picked) rememberSentence(picked.text)
+  return picked
 }
 
 function escapeHtml(s) {
@@ -408,7 +447,7 @@ export function bootEnglish(root) {
     if (mode === 'article') {
       return pickFittedArticle(state.passage)
     }
-    return shufflePick(ENGLISH_SENTENCES, state.passage)
+    return pickSentence()
   }
 
   function loadPassageAt(passage) {
