@@ -2373,13 +2373,13 @@ button.scheme-btn:focus-visible {
 }
 
 .spk-mic.is-listening .spk-mic-icon {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
 }
 
 .spk-stop-icon {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
 }
 
 @keyframes spk-pulse {

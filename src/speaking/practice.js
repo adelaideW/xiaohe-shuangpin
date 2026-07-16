@@ -22,7 +22,7 @@ import { toFuriganaHtml } from './furigana.js'
 import { registerDrawerHandlers, syncBottomTabActive, isPhoneViewport } from '../mobileNav.js'
 
 const ICON_RECORD = `<svg class="spk-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11.25a6.5 6.5 0 0 0 13 0"/><path d="M12 17.75V21"/><path d="M9.25 21h5.5"/></svg>`
-const ICON_STOP = `<svg class="spk-mic-icon spk-stop-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" fill="currentColor"/></svg>`
+const ICON_STOP = `<svg class="spk-mic-icon spk-stop-icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="0" y="0" width="24" height="24" rx="3" fill="currentColor"/></svg>`
 
 function escapeHtml(s) {
   return String(s)
