@@ -49,6 +49,16 @@ import {
   syncPracticeSpeakButtons,
   wrapCollapsibleStats,
 } from '../mobileNav.js'
+import {
+  bindTypingStatsSheet,
+  mobileTimerChipText,
+  patchTypingStatsSheetFromSource,
+  renderHiddenStatsForMobile,
+  renderMobileTimerChip,
+  renderTypingStatsSheet,
+  syncMobileTimerFromState,
+  syncTypingStatsSheet,
+} from '../typingMobileChrome.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -186,6 +196,7 @@ export function bootJapanese(root) {
     readingsBusy: false,
     mistakesOnly: false,
     mistakeIndex: -1,
+    statsSheetOpen: false,
   }
 
   let tickHandle = null
@@ -271,6 +282,7 @@ export function bootJapanese(root) {
     state.sessionFinished = true
     state.sessionPaused = false
     state.autoPaused = false
+    if (isPhoneViewport()) state.statsSheetOpen = true
     clearAdvanceTimer()
     render()
   }
@@ -293,12 +305,24 @@ export function bootJapanese(root) {
       el.textContent = formatTime(left)
       el.classList.toggle('urgent', left < 30000)
     }
+    syncMobileTimerFromState({
+      state,
+      settings,
+      formatTime,
+      labels: { done: '終了', paused: '一時停止', idle: '待機' },
+    })
   }
 
   function renderTimerControls() {
     const host = document.querySelector('.timer-right')
     if (host) host.innerHTML = timerRightHtml()
     bindTimerButtons()
+    syncMobileTimerFromState({
+      state,
+      settings,
+      formatTime,
+      labels: { done: '終了', paused: '一時停止', idle: '待機' },
+    })
   }
 
   function timerRightHtml() {
@@ -587,6 +611,7 @@ export function bootJapanese(root) {
     state.autoPaused = false
     state.pausedAccumMs = 0
     state.remainingMs = state.durationMinutes * 60 * 1000
+    state.statsSheetOpen = false
     clearAdvanceTimer()
   }
 
@@ -842,7 +867,9 @@ export function bootJapanese(root) {
   }
 
   function patchStats() {
-    const values = document.querySelectorAll('.stat .value')
+    const source = document.querySelector('.typing-stats-source .stats') || document.querySelector('.stats-disclosure .stats')
+    if (!source) return
+    const values = source.querySelectorAll('.stat .value')
     if (values.length < 6) return
     values[0].textContent = String(state.correct)
     values[1].textContent = String(state.combo)
@@ -851,6 +878,7 @@ export function bootJapanese(root) {
     values[4].textContent = String(state.startedAt ? cpm() : 0)
     values[5].textContent = String(state.keystrokes)
     patchStatsSummary()
+    patchTypingStatsSheetFromSource()
   }
 
   function patchLive() {
@@ -983,8 +1011,8 @@ export function bootJapanese(root) {
       </div>`
   }
 
-  function renderStats() {
-    const stats = `
+  function statsInnerHtml() {
+    return `
       <div class="stats">
         <div class="stat"><span class="label">正解</span><span class="value">${state.correct}</span></div>
         <div class="stat"><span class="label">連打</span><span class="value">${state.combo}</span></div>
@@ -993,6 +1021,25 @@ export function bootJapanese(root) {
         <div class="stat"><span class="label">単位/分</span><span class="value">${state.startedAt ? cpm() : 0}</span></div>
         <div class="stat"><span class="label">打鍵</span><span class="value">${state.keystrokes}</span></div>
       </div>`
+  }
+
+  function renderStatsSheet() {
+    if (!isPhoneViewport()) return ''
+    const summary = state.sessionFinished
+      ? `<p class="spk-summary typing-stats-summary">${accuracy()}% · ${cpm()} 単位/分 · ${state.passagesDone} 篇</p>`
+      : ''
+    return renderTypingStatsSheet({
+      title: '練習統計',
+      summaryHtml: summary,
+      statsHtml: statsInnerHtml(),
+      restartLabel: 'もう一度',
+      open: state.statsSheetOpen,
+    })
+  }
+
+  function renderStats() {
+    const stats = statsInnerHtml()
+    if (isPhoneViewport()) return renderHiddenStatsForMobile(stats)
     return wrapCollapsibleStats(stats, {
       storageKey: 'japanese-stats-collapsed',
       summaryLabels: { streak: '連打', accuracy: '正確率' },
@@ -1003,11 +1050,11 @@ export function bootJapanese(root) {
   }
 
   function renderWordStage() {
-    if (state.sessionFinished) {
+    if (state.sessionFinished && !isPhoneViewport()) {
       return `<div class="complete-banner"><h2>セッション終了</h2><p>${accuracy()}% · ${cpm()} 単位/分</p>
         <div class="toolbar"><button type="button" class="primary" data-restart>もう一度</button></div></div>`
     }
-    if (state.completed) {
+    if (state.completed && !state.sessionFinished) {
       const hasMistakes = state.passageWrong > 0
       return `<div class="complete-banner">
         <h2>${hasMistakes ? '完了' : '完璧！'}</h2>
@@ -1040,10 +1087,16 @@ export function bootJapanese(root) {
         : cur
           ? `${hira} · ${exp}`
           : ''
+    const timerChip = renderMobileTimerChip(
+      mobileTimerChipText({ state, settings, formatTime, labels: { done: '終了' } }),
+    )
 
     return `
       <div class="char-stage word-stage">
-        <div class="mobile-stage-actions">${renderMobilePracticeActions({ skip: 'スキップ', speak: '読み上げ' })}</div>
+        <div class="mobile-stage-actions">
+          ${timerChip}
+          ${renderMobilePracticeActions({ skip: 'スキップ', speak: '読み上げ' })}
+        </div>
         <div class="hanzi word-display jp-word${showFuri ? ' has-furigana' : ''}">${wordHtml}</div>
         <div class="pinyin-line">${hintText}</div>
         <div class="code-progress">${slots}</div>
@@ -1053,11 +1106,11 @@ export function bootJapanese(root) {
   function renderStage() {
     if (!state.passage) return ''
     if (state.mode === 'word') return renderWordStage()
-    if (state.sessionFinished) {
+    if (state.sessionFinished && !isPhoneViewport()) {
       return `<div class="complete-banner"><h2>セッション終了</h2><p>${accuracy()}% · ${cpm()} 単位/分</p>
         <div class="toolbar"><button type="button" class="primary" data-restart>もう一度</button></div></div>`
     }
-    if (state.completed) {
+    if (state.completed && !state.sessionFinished) {
       const hasMistakes = state.passageWrong > 0
       return `<div class="complete-banner">
         <h2>${hasMistakes ? '完了' : '完璧！'}</h2>
@@ -1083,6 +1136,9 @@ export function bootJapanese(root) {
     const canPrev = state.historyIndex > 0
     const hira = cur ? hintHiragana(cur.kana) : ''
     const showFuri = settings.speakShowHiragana
+    const timerChip = renderMobileTimerChip(
+      mobileTimerChipText({ state, settings, formatTime, labels: { done: '終了' } }),
+    )
 
     return `
       <div class="char-stage passage-stage">
@@ -1094,6 +1150,7 @@ export function bootJapanese(root) {
             </div>
             <span class="title">${escapeHtml(state.passage.title)}</span>
             <span class="passage-progress">${progress}</span>
+            ${timerChip}
           </div>
           <div class="passage-actions">
             <label class="ghost-chip upload-chip practice-upload-control" title="アップロード" aria-label="アップロード">
@@ -1348,10 +1405,27 @@ export function bootJapanese(root) {
         ${renderKeyboard()}
       </main>
       <p class="footer-note">日本語トラック · 設定は他言語と分離</p>
+      ${renderStatsSheet()}
       ${state.drawer ? `<div class="drawer-backdrop" id="drawer-backdrop"></div>${drawer}` : ''}
     `
     bindEvents()
     bindStatsDisclosure()
+    bindTypingStatsSheet({
+      onRestart: () => {
+        void restartRound()
+      },
+      onClose: () => {
+        state.statsSheetOpen = false
+        syncTypingStatsSheet(false)
+      },
+    })
+    syncTypingStatsSheet(state.statsSheetOpen)
+    syncMobileTimerFromState({
+      state,
+      settings,
+      formatTime,
+      labels: { done: '終了', paused: '一時停止', idle: '待機' },
+    })
     syncModeControl()
     if (isSpeechPlaying()) syncSpeakUi(true)
     state.drawerJustOpened = false

@@ -878,7 +878,10 @@ button.scheme-btn:focus-visible {
   right: 0.75rem;
   z-index: 2;
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.35rem;
+  max-width: calc(100% - 1.5rem);
 }
 
 .main > .toolbar #btn-skip,
@@ -1547,6 +1550,75 @@ button.scheme-btn:focus-visible {
 .passage-stage:has(.english-passage) .typing-chrome {
   margin-top: 1.15rem;
   gap: 0.7rem;
+}
+
+.typing-stats-source {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.typing-timer-chip {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.35rem;
+  height: 1.65rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.typing-timer-chip.urgent {
+  color: var(--coral);
+  border-color: color-mix(in srgb, var(--coral) 35%, var(--line));
+  background: var(--coral-soft);
+}
+
+.typing-timer-chip.paused {
+  color: var(--muted);
+}
+
+.typing-timer-chip.done {
+  color: var(--jade-deep);
+  border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
+  background: var(--jade-soft);
+}
+
+.typing-timer-chip.idle {
+  color: var(--muted);
+}
+
+.typing-stats-summary {
+  margin: 0.15rem 0 0.75rem;
+}
+
+.typing-stats-sheet-actions {
+  display: flex;
+  justify-content: stretch;
+  margin-top: 0.85rem;
+}
+
+.typing-stats-sheet-actions .primary {
+  width: 100%;
+}
+
+.typing-stats-sheet .stats {
+  margin-top: 0.35rem;
 }
 
 /* Passage / article: fill remaining viewport so typing input stays on-screen */
@@ -3020,6 +3092,43 @@ button.scheme-btn:focus-visible {
     display: flex;
   }
 
+  html.has-mobile-chrome .skill-host > .timer-bar,
+  html.has-mobile-chrome .skill-host > .stats-disclosure {
+    display: none !important;
+  }
+
+  html.has-mobile-chrome .typing-timer-chip {
+    display: inline-flex;
+  }
+
+  html.has-mobile-chrome .passage-title-row .typing-timer-chip {
+    margin-left: auto;
+  }
+
+  html.has-mobile-chrome .mobile-stage-actions .typing-timer-chip {
+    margin-right: auto;
+  }
+
+  html.has-mobile-chrome .passage-title-row .title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.typing-stats-sheet-open .practice-card,
+  body.typing-stats-sheet-open .mobile-bottom-nav {
+    pointer-events: none;
+  }
+
+  body.typing-stats-sheet-open .typing-stats-sheet {
+    pointer-events: auto;
+  }
+
+  .typing-stats-sheet {
+    z-index: 75;
+  }
+
   .stats-disclosure.is-collapsed .stats {
     position: absolute;
     width: 1px;
@@ -3546,6 +3655,14 @@ button.scheme-btn:focus-visible {
     gap: 0.4rem;
   }
 
+  html.has-mobile-chrome .skill-host:has(.passage-stage) > .main {
+    padding-top: 0.15rem;
+  }
+
+  html.has-mobile-chrome .skill-host:has(.passage-stage) .skill-sticky-head {
+    margin-bottom: -0.15rem;
+  }
+
   .skill-host:has(.passage-stage) .practice-card {
     padding: 0.65rem 0.7rem 0.55rem;
   }
@@ -3579,6 +3696,7 @@ button.scheme-btn:focus-visible {
   body.mobile-typing-keyboard-open .topbar,
   body.mobile-typing-keyboard-open .timer-bar,
   body.mobile-typing-keyboard-open .stats-disclosure,
+  body.mobile-typing-keyboard-open .typing-stats-source,
   body.mobile-typing-keyboard-open .stats,
   body.mobile-typing-keyboard-open .main > .toolbar,
   body.mobile-typing-keyboard-open .keyboard-wrap,

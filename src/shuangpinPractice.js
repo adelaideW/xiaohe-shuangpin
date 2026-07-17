@@ -44,6 +44,16 @@ import {
   syncPracticeSpeakButtons,
   wrapCollapsibleStats,
 } from './mobileNav.js'
+import {
+  bindTypingStatsSheet,
+  mobileTimerChipText,
+  patchTypingStatsSheetFromSource,
+  renderHiddenStatsForMobile,
+  renderMobileTimerChip,
+  renderTypingStatsSheet,
+  syncMobileTimerFromState,
+  syncTypingStatsSheet,
+} from './typingMobileChrome.js'
 
 function escapeHtml(s) {
   return String(s)
@@ -103,6 +113,7 @@ const state = {
   pausedAccumMs: 0,
   autoAdvanceNote: '',
   autoPaused: false, // paused due to inactivity
+  statsSheetOpen: false,
   // pagination
   pages: [{ start: 0, end: 0 }],
   pageIndex: 0,
@@ -267,6 +278,12 @@ function resetTimerCountdown() {
     el.classList.toggle('urgent', state.remainingMs < 30000)
     el.classList.remove('paused')
   }
+  syncMobileTimerFromState({
+    state,
+    settings,
+    formatTime,
+    labels: { done: '结束', paused: '暂停', idle: '闲置' },
+  })
 }
 
 function endSession() {
@@ -278,6 +295,7 @@ function endSession() {
   state.pauseStartedAt = null
   state.remainingMs = 0
   state.completed = true
+  if (isPhoneViewport()) state.statsSheetOpen = true
   clearAdvanceTimer()
   render()
 }
@@ -309,6 +327,12 @@ function updateTimerDisplay() {
     el.classList.toggle('urgent', left < 30000)
     el.classList.remove('paused')
   }
+  syncMobileTimerFromState({
+    state,
+    settings,
+    formatTime,
+    labels: { done: '结束', paused: '暂停', idle: '闲置' },
+  })
 }
 
 /** Soft-update timer buttons without full page rebuild when possible */
@@ -325,6 +349,12 @@ function renderTimerControls() {
   }
   right.innerHTML = timerRightHtml()
   bindTimerButtons()
+  syncMobileTimerFromState({
+    state,
+    settings,
+    formatTime,
+    labels: { done: '结束', paused: '暂停', idle: '闲置' },
+  })
 }
 
 function timerRightHtml() {
@@ -560,6 +590,7 @@ function resetSessionStats() {
   state.lastActivityAt = 0
   state.sessionEndsAt = null
   state.remainingMs = state.durationMinutes * 60 * 1000
+  state.statsSheetOpen = false
   clearAdvanceTimer()
 }
 
@@ -799,8 +830,37 @@ function onPassageComplete() {
   render()
 }
 
+function statsInnerHtml() {
+  return `
+    <div class="stats">
+      <div class="stat"><span class="label">已练</span><span class="value">${state.correct}</span></div>
+      <div class="stat"><span class="label">连击</span><span class="value">${state.combo}</span></div>
+      <div class="stat"><span class="label">最佳</span><span class="value">${state.best}</span></div>
+      <div class="stat"><span class="label">准确率</span><span class="value">${accuracy()}%</span></div>
+      <div class="stat"><span class="label">字/分</span><span class="value">${state.startedAt ? cpm() : 0}</span></div>
+      <div class="stat"><span class="label">键/分</span><span class="value">${state.startedAt ? kpm() : 0}</span></div>
+    </div>
+  `
+}
+
+function renderStatsSheet() {
+  if (!isPhoneViewport()) return ''
+  const summary = state.sessionFinished
+    ? `<p class="spk-summary typing-stats-summary">练了 ${state.correct} 字 · 准确率 ${accuracy()}% · ${cpm()} 字/分${state.mode !== 'character' ? ` · 完成 ${state.passagesDone} 篇` : ''}</p>`
+    : ''
+  return renderTypingStatsSheet({
+    title: '练习统计',
+    summaryHtml: summary,
+    statsHtml: statsInnerHtml(),
+    restartLabel: '再练一轮',
+    open: state.statsSheetOpen,
+  })
+}
+
 function patchStats() {
-  const values = document.querySelectorAll('.stat .value')
+  const source = document.querySelector('.typing-stats-source .stats') || document.querySelector('.stats-disclosure .stats')
+  if (!source) return
+  const values = source.querySelectorAll('.stat .value')
   if (values.length < 6) return
   values[0].textContent = String(state.correct)
   values[1].textContent = String(state.combo)
@@ -809,6 +869,7 @@ function patchStats() {
   values[4].textContent = String(state.startedAt ? cpm() : 0)
   values[5].textContent = String(state.startedAt ? kpm() : 0)
   patchStatsSummary()
+  patchTypingStatsSheetFromSource()
 }
 
 function patchCodeSlots() {
@@ -1373,16 +1434,8 @@ function renderTimerBar() {
 }
 
 function renderStats() {
-  const stats = `
-    <div class="stats">
-      <div class="stat"><span class="label">已练</span><span class="value">${state.correct}</span></div>
-      <div class="stat"><span class="label">连击</span><span class="value">${state.combo}</span></div>
-      <div class="stat"><span class="label">最佳</span><span class="value">${state.best}</span></div>
-      <div class="stat"><span class="label">准确率</span><span class="value">${accuracy()}%</span></div>
-      <div class="stat"><span class="label">字/分</span><span class="value">${state.startedAt ? cpm() : 0}</span></div>
-      <div class="stat"><span class="label">键/分</span><span class="value">${state.startedAt ? kpm() : 0}</span></div>
-    </div>
-  `
+  const stats = statsInnerHtml()
+  if (isPhoneViewport()) return renderHiddenStatsForMobile(stats)
   return wrapCollapsibleStats(stats, {
     storageKey: 'shuangpin-stats-collapsed',
     summaryLabels: { streak: '连击', accuracy: '准确率' },
@@ -1489,13 +1542,19 @@ function renderCodeSlots() {
 }
 
 function renderCharacterStage() {
-  if (state.sessionFinished) return renderSessionSummary()
+  if (state.sessionFinished && !isPhoneViewport()) return renderSessionSummary()
   const t = state.currentChar
   if (!t) return ''
   const codes = encodeOptions(settings.scheme, t.pinyin)
+  const timerChip = renderMobileTimerChip(
+    mobileTimerChipText({ state, settings, formatTime, labels: { done: '结束' } }),
+  )
   return `
     <div class="char-stage word-stage">
-      <div class="mobile-stage-actions">${renderMobilePracticeActions({ skip: '跳过', speak: '读音' })}</div>
+      <div class="mobile-stage-actions">
+        ${timerChip}
+        ${renderMobilePracticeActions({ skip: '跳过', speak: '读音' })}
+      </div>
       <div class="hanzi">${t.char}</div>
       <div class="pinyin-line">${t.pinyin} · ${codes.join(' / ')}</div>
       ${renderCodeSlots()}
@@ -1531,9 +1590,9 @@ function renderPassageNav() {
 
 function renderPassageStage() {
   if (!state.passage) return ''
-  if (state.sessionFinished) return renderSessionSummary()
+  if (state.sessionFinished && !isPhoneViewport()) return renderSessionSummary()
 
-  if (state.completed) {
+  if (state.completed && !state.sessionFinished) {
     const hasMistakes = state.passageWrong > 0
     return `
       <div class="complete-banner">
@@ -1551,6 +1610,9 @@ function renderPassageStage() {
   const codes = currentCodes()
   const multiPage = state.pages.length > 1
   const progress = `${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}`
+  const timerChip = renderMobileTimerChip(
+    mobileTimerChipText({ state, settings, formatTime, labels: { done: '结束' } }),
+  )
 
   return `
     <div class="char-stage passage-stage">
@@ -1559,6 +1621,7 @@ function renderPassageStage() {
           ${renderPassageNav()}
           <span class="title">${state.passage.title}${settings.smartPractice ? ' · 智能' : ''}</span>
           <span class="passage-progress">${progress}</span>
+          ${timerChip}
         </div>
         <div class="passage-actions">
           <label class="ghost-chip upload-chip practice-upload-control" title="上传文章" aria-label="上传文章">
@@ -1655,11 +1718,26 @@ function render() {
       ${renderKeyboard()}
     </main>
     <p class="footer-note">本地练习 · 偏好与错字本已自动保存</p>
+    ${renderStatsSheet()}
     ${state.drawer ? `<div class="drawer-backdrop" id="drawer-backdrop"></div>${drawer}` : ''}
   `
 
   bindEvents()
   bindStatsDisclosure()
+  bindTypingStatsSheet({
+    onRestart: restartRound,
+    onClose: () => {
+      state.statsSheetOpen = false
+      syncTypingStatsSheet(false)
+    },
+  })
+  syncTypingStatsSheet(state.statsSheetOpen)
+  syncMobileTimerFromState({
+    state,
+    settings,
+    formatTime,
+    labels: { done: '结束', paused: '暂停', idle: '闲置' },
+  })
   syncModeControl()
   if (isSpeechPlaying()) syncSpeakUi(true)
   state.drawerJustOpened = false

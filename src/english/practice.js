@@ -49,6 +49,16 @@ import {
   syncPracticeSpeakButtons,
   wrapCollapsibleStats,
 } from '../mobileNav.js'
+import {
+  bindTypingStatsSheet,
+  mobileTimerChipText,
+  patchTypingStatsSheetFromSource,
+  renderHiddenStatsForMobile,
+  renderMobileTimerChip,
+  renderTypingStatsSheet,
+  syncMobileTimerFromState,
+  syncTypingStatsSheet,
+} from '../typingMobileChrome.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -189,6 +199,7 @@ export function bootEnglish(root) {
     mistakesOnly: false,
     mistakeIndex: -1,
     recordedMistakeWordSpans: new Set(),
+    statsSheetOpen: false,
   }
 
   let tickHandle = null
@@ -297,6 +308,7 @@ export function bootEnglish(root) {
     if (state.sessionEndsAt) {
       state.remainingMs = Math.max(0, state.sessionEndsAt - performance.now())
     }
+    if (isPhoneViewport()) state.statsSheetOpen = true
     clearAdvanceTimer()
     render()
   }
@@ -323,12 +335,24 @@ export function bootEnglish(root) {
       el.textContent = formatTime(left)
       el.classList.toggle('urgent', left < 30000)
     }
+    syncMobileTimerFromState({
+      state,
+      settings,
+      formatTime,
+      labels: { done: 'Done', paused: 'paused', idle: 'idle' },
+    })
   }
 
   function renderTimerControls() {
     const host = document.querySelector('.timer-right')
     if (host) host.innerHTML = timerRightHtml()
     bindTimerButtons()
+    syncMobileTimerFromState({
+      state,
+      settings,
+      formatTime,
+      labels: { done: 'Done', paused: 'paused', idle: 'idle' },
+    })
   }
 
   function timerRightHtml() {
@@ -559,6 +583,7 @@ export function bootEnglish(root) {
     state.pauseStartedAt = null
     state.lastActivityAt = 0
     state.remainingMs = state.durationMinutes * 60 * 1000
+    state.statsSheetOpen = false
     clearAdvanceTimer()
   }
 
@@ -953,7 +978,9 @@ export function bootEnglish(root) {
   }
 
   function patchStats() {
-    const values = document.querySelectorAll('.stat .value')
+    const source = document.querySelector('.typing-stats-source .stats') || document.querySelector('.stats-disclosure .stats')
+    if (!source) return
+    const values = source.querySelectorAll('.stat .value')
     if (values.length < 6) return
     values[0].textContent = String(state.correct)
     values[1].textContent = String(state.combo)
@@ -962,6 +989,7 @@ export function bootEnglish(root) {
     values[4].textContent = String(state.startedAt ? wpm() : 0)
     values[5].textContent = String(state.keystrokes)
     patchStatsSummary()
+    patchTypingStatsSheetFromSource()
   }
 
   function expectedKeyLabel() {
@@ -1077,8 +1105,8 @@ export function bootEnglish(root) {
     `
   }
 
-  function renderStats() {
-    const stats = `
+  function statsInnerHtml() {
+    return `
       <div class="stats">
         <div class="stat"><span class="label">Correct</span><span class="value">${state.correct}</span></div>
         <div class="stat"><span class="label">Streak</span><span class="value">${state.combo}</span></div>
@@ -1088,6 +1116,25 @@ export function bootEnglish(root) {
         <div class="stat"><span class="label">Keystrokes</span><span class="value">${state.keystrokes}</span></div>
       </div>
     `
+  }
+
+  function renderStatsSheet() {
+    if (!isPhoneViewport()) return ''
+    const summary = state.sessionFinished
+      ? `<p class="spk-summary typing-stats-summary">${accuracy()}% accuracy · ${wpm()} WPM · ${state.passagesDone} passages</p>`
+      : ''
+    return renderTypingStatsSheet({
+      title: 'Session stats',
+      summaryHtml: summary,
+      statsHtml: statsInnerHtml(),
+      restartLabel: 'Restart',
+      open: state.statsSheetOpen,
+    })
+  }
+
+  function renderStats() {
+    const stats = statsInnerHtml()
+    if (isPhoneViewport()) return renderHiddenStatsForMobile(stats)
     return wrapCollapsibleStats(stats, {
       storageKey: 'english-stats-collapsed',
       summaryLabels: { streak: 'Streak', accuracy: 'Accuracy' },
@@ -1110,8 +1157,8 @@ export function bootEnglish(root) {
   }
 
   function renderWordStage() {
-    if (state.sessionFinished) return renderSessionSummary()
-    if (state.completed) {
+    if (state.sessionFinished && !isPhoneViewport()) return renderSessionSummary()
+    if (state.completed && !state.sessionFinished) {
       const hasMistakes = state.passageWrong > 0
       return `
         <div class="complete-banner">
@@ -1127,10 +1174,16 @@ export function bootEnglish(root) {
 
     const word = state.passage?.text || ''
     const t = currentTarget()
+    const timerChip = renderMobileTimerChip(
+      mobileTimerChipText({ state, settings, formatTime, labels: { done: 'Done' } }),
+    )
 
     return `
       <div class="char-stage word-stage">
-        <div class="mobile-stage-actions">${renderMobilePracticeActions({ skip: 'Skip', speak: 'Read aloud' })}</div>
+        <div class="mobile-stage-actions">
+          ${timerChip}
+          ${renderMobilePracticeActions({ skip: 'Skip', speak: 'Read aloud' })}
+        </div>
         <div class="hanzi word-display english-word">${escapeHtml(word)}</div>
         <div class="pinyin-line">${t ? displayChar(t.char) : ''}</div>
         ${typingSlotsHtml()}
@@ -1141,8 +1194,8 @@ export function bootEnglish(root) {
   function renderStage() {
     if (!state.passage) return ''
     if (state.mode === 'word') return renderWordStage()
-    if (state.sessionFinished) return renderSessionSummary()
-    if (state.completed) {
+    if (state.sessionFinished && !isPhoneViewport()) return renderSessionSummary()
+    if (state.completed && !state.sessionFinished) {
       const hasMistakes = state.passageWrong > 0
       return `
         <div class="complete-banner">
@@ -1159,6 +1212,9 @@ export function bootEnglish(root) {
     const multiPage = state.pages.length > 1
     const progress = `${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · err ${state.passageWrong}` : ''}`
     const canPrev = state.historyIndex > 0
+    const timerChip = renderMobileTimerChip(
+      mobileTimerChipText({ state, settings, formatTime, labels: { done: 'Done' } }),
+    )
 
     return `
       <div class="char-stage passage-stage">
@@ -1170,6 +1226,7 @@ export function bootEnglish(root) {
             </div>
             <span class="title">${escapeHtml(state.passage.title)}${settings.smartPractice ? ' · smart' : ''}</span>
             <span class="passage-progress">${progress}</span>
+            ${timerChip}
           </div>
           <div class="passage-actions">
             <label class="ghost-chip upload-chip practice-upload-control" title="Upload" aria-label="Upload">
@@ -1427,11 +1484,26 @@ export function bootEnglish(root) {
         ${renderKeyboard()}
       </main>
       <p class="footer-note">English track · preferences saved locally · isolated from 双拼</p>
+      ${renderStatsSheet()}
       ${state.drawer ? `<div class="drawer-backdrop" id="drawer-backdrop"></div>${drawer}` : ''}
     `
 
     bindEvents()
     bindStatsDisclosure()
+    bindTypingStatsSheet({
+      onRestart: restartRound,
+      onClose: () => {
+        state.statsSheetOpen = false
+        syncTypingStatsSheet(false)
+      },
+    })
+    syncTypingStatsSheet(state.statsSheetOpen)
+    syncMobileTimerFromState({
+      state,
+      settings,
+      formatTime,
+      labels: { done: 'Done', paused: 'paused', idle: 'idle' },
+    })
     syncModeControl()
     if (isSpeechPlaying()) syncSpeakUi(true)
     state.drawerJustOpened = false
