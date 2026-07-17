@@ -590,8 +590,10 @@ export function bootJapanese(root) {
       state.unitIndex = page.start
       state.buffer = ''
     }
-    render()
-    focusApp()
+    clearAdvanceTimer()
+    patchPageChrome()
+    patchLive()
+    requestAnimationFrame(() => scrollCurrentIntoView({ instant: true }))
   }
 
   function resetSessionStats() {
@@ -753,9 +755,9 @@ export function bootJapanese(root) {
     const nextPage = pageIndexForUnit(state.pages, state.unitIndex)
     if (nextPage !== state.pageIndex) {
       state.pageIndex = nextPage
-      render()
-      focusApp()
-      requestAnimationFrame(scrollCurrentIntoView)
+      patchPageChrome()
+      patchLive()
+      requestAnimationFrame(() => scrollCurrentIntoView({ instant: true }))
       return
     }
     patchLive()
@@ -917,21 +919,29 @@ export function bootJapanese(root) {
         .join('')
     }
     patchStats()
+    patchPageChrome()
     scrollCurrentIntoView()
+  }
+
+  function patchPageChrome() {
+    const pageLabel = document.querySelector('.page-label')
+    if (pageLabel && state.pages.length > 1) {
+      pageLabel.textContent = `${state.pageIndex + 1}/${state.pages.length} ページ`
+    }
+    const prevBtn = document.querySelector('#btn-prev-page')
+    const nextBtn = document.querySelector('#btn-next-page')
+    if (prevBtn) prevBtn.disabled = state.pageIndex <= 0
+    if (nextBtn) nextBtn.disabled = state.pageIndex >= state.pages.length - 1
   }
 
   function japanesePassageHtml() {
     const cur = currentTarget()
     const doneSeg = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-    const page = state.pages[state.pageIndex] || { start: 0, end: state.units.length }
-    const pageSegStart = state.units[page.start]?.index ?? 0
-    const pageSegEnd = state.units[page.end - 1]?.index ?? pageSegStart
     const segs = state.passage.segments || []
     const showFuri = settings.speakShowHiragana
 
     return segs
       .map((seg, i) => {
-        if (i < pageSegStart || i > pageSegEnd) return ''
         const classes = ['jp-seg']
         if (!seg.kana) classes.push('jp-punct')
         if (seg.surface === ' ' || seg.surface === '\u3000') classes.push('jp-space')
@@ -942,11 +952,12 @@ export function bootJapanese(root) {
       .join('')
   }
 
-  function scrollCurrentIntoView() {
+  function scrollCurrentIntoView({ instant = false } = {}) {
     scrollTypingFocusIntoView({
       unitIndex: state.unitIndex,
       unitCount: state.units.length,
       selector: '.passage-scroll .jp-seg.current',
+      instant,
     })
   }
 

@@ -739,9 +739,9 @@ function goPage(delta) {
     state.buffer = ''
   }
   clearAdvanceTimer()
-  render()
-  focusApp()
-  requestAnimationFrame(scrollCurrentIntoView)
+  patchPageChrome()
+  patchLive()
+  requestAnimationFrame(() => scrollCurrentIntoView({ instant: true }))
 }
 
 async function handleUploadedFile(file) {
@@ -973,11 +973,7 @@ function patchPassageCursor() {
     }`
   }
 
-  const pageLabel = document.querySelector('.page-label')
-  if (pageLabel && state.pages.length > 1) {
-    pageLabel.textContent = `第 ${state.pageIndex + 1}/${state.pages.length} 页`
-  }
-
+  patchPageChrome()
   scrollCurrentIntoView()
 }
 
@@ -985,14 +981,9 @@ function passageCharsHtml() {
   if (!state.passage) return ''
   const currentIndex = state.units[state.unitIndex]?.index ?? -1
   const doneIndexes = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-  const page = state.pages[state.pageIndex] || { start: 0, end: state.units.length }
-  const pageUnits = state.units.slice(page.start, page.end)
-  const start = pageUnits[0]?.index ?? 0
-  const end = pageUnits[pageUnits.length - 1]?.index ?? 0
 
   return [...state.passage.text]
     .map((ch, i) => {
-      if (i < start || i > end) return ''
       const classes = ['ch']
       if (doneIndexes.has(i)) classes.push('done')
       if (i === currentIndex) classes.push('current')
@@ -1052,20 +1043,32 @@ function onCorrectSyllable() {
   const nextPage = pageIndexForUnit(state.pages, state.unitIndex)
   if (nextPage !== state.pageIndex) {
     state.pageIndex = nextPage
-    render()
-    focusApp()
-    requestAnimationFrame(scrollCurrentIntoView)
+    patchPageChrome()
+    patchLive()
+    requestAnimationFrame(() => scrollCurrentIntoView({ instant: true }))
     return
   }
   patchLive()
   requestAnimationFrame(scrollCurrentIntoView)
 }
 
-function scrollCurrentIntoView() {
+function patchPageChrome() {
+  const pageLabel = document.querySelector('.page-label')
+  if (pageLabel && state.pages.length > 1) {
+    pageLabel.textContent = `第 ${state.pageIndex + 1}/${state.pages.length} 页`
+  }
+  const prevBtn = document.querySelector('#btn-prev-page')
+  const nextBtn = document.querySelector('#btn-next-page')
+  if (prevBtn) prevBtn.disabled = state.pageIndex <= 0
+  if (nextBtn) nextBtn.disabled = state.pageIndex >= state.pages.length - 1
+}
+
+function scrollCurrentIntoView({ instant = false } = {}) {
   scrollTypingFocusIntoView({
     unitIndex: state.unitIndex,
     unitCount: state.units.length,
     selector: '.passage-scroll .ch.current',
+    instant,
   })
 }
 

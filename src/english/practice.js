@@ -560,9 +560,9 @@ export function bootEnglish(root) {
       state.unitIndex = page.start
     }
     clearAdvanceTimer()
-    render()
-    focusApp()
-    requestAnimationFrame(scrollCurrentIntoView)
+    patchPageChrome()
+    patchLive()
+    requestAnimationFrame(() => scrollCurrentIntoView({ instant: true }))
   }
 
   function resetSessionStats() {
@@ -738,9 +738,9 @@ export function bootEnglish(root) {
     const nextPage = pageIndexForUnit(state.pages, state.unitIndex)
     if (nextPage !== state.pageIndex) {
       state.pageIndex = nextPage
-      render()
-      focusApp()
-      requestAnimationFrame(scrollCurrentIntoView)
+      patchPageChrome()
+      patchLive()
+      requestAnimationFrame(() => scrollCurrentIntoView({ instant: true }))
       return
     }
     patchLive()
@@ -839,26 +839,33 @@ export function bootEnglish(root) {
     syncBottomTabActive()
   }
 
-  function scrollCurrentIntoView() {
+  function scrollCurrentIntoView({ instant = false } = {}) {
     scrollTypingFocusIntoView({
       unitIndex: state.unitIndex,
       unitCount: state.units.length,
       selector: '.passage-scroll .ch.current',
+      instant,
     })
+  }
+
+  function patchPageChrome() {
+    const pageLabel = document.querySelector('.page-label')
+    if (pageLabel && state.pages.length > 1) {
+      pageLabel.textContent = `Page ${state.pageIndex + 1}/${state.pages.length}`
+    }
+    const prevBtn = document.querySelector('#btn-prev-page')
+    const nextBtn = document.querySelector('#btn-next-page')
+    if (prevBtn) prevBtn.disabled = state.pageIndex <= 0
+    if (nextBtn) nextBtn.disabled = state.pageIndex >= state.pages.length - 1
   }
 
   function passageCharsHtml() {
     if (!state.passage) return ''
     const currentIndex = state.units[state.unitIndex]?.index ?? -1
     const doneIndexes = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-    const page = state.pages[state.pageIndex] || { start: 0, end: state.units.length }
-    const pageUnits = state.units.slice(page.start, page.end)
-    const start = pageUnits[0]?.index ?? 0
-    const end = pageUnits[pageUnits.length - 1]?.index ?? 0
 
     return [...state.passage.text]
       .map((ch, i) => {
-        if (i < start || i > end) return ''
         const classes = ['ch']
         if (doneIndexes.has(i)) classes.push('done')
         if (i === currentIndex) classes.push('current')
@@ -888,6 +895,7 @@ export function bootEnglish(root) {
         state.passageWrong ? ` · err ${state.passageWrong}` : ''
       }`
     }
+    patchPageChrome()
     const hint = document.querySelector('.pinyin-line')
     if (hint) {
       // Sentence/article: whole-word suggestion; word mode keeps single-letter cue.
