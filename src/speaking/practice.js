@@ -234,12 +234,14 @@ export function bootSpeaking(root, opts) {
 
   let recognizer = createSpeechRecognizer(language, {
     onUpdate: ({ transcript, listening, error }) => {
+      const wasListening = state.listening
       state.transcript = transcript
       state.listening = listening
       state.srError = error
       patchLive()
-      if (!listening && transcript && !state.grading && !activeFeedback()) {
-        runGrade(transcript)
+      // Grade once when a recording session ends (stop, silence, or error).
+      if (wasListening && !listening && !state.grading) {
+        void runGrade(transcript)
       }
     },
   })
@@ -272,7 +274,14 @@ export function bootSpeaking(root, opts) {
   }
 
   async function runGrade(transcript) {
-    if (!transcript?.trim()) {
+    if (state.grading) return
+    const text = String(transcript || '').trim()
+    // Always surface the phone feedback sheet when a recording attempt ends.
+    if (isPhoneViewport()) {
+      state.feedbackSheetOpen = true
+      state.feedbackSheetExpanded = false
+    }
+    if (!text) {
       state.gradeError =
         t(
           'Nothing to grade yet — try recording or typing what you said.',
@@ -290,20 +299,16 @@ export function bootSpeaking(root, opts) {
     }
     state.grading = true
     state.gradeError = ''
-    if (isPhoneViewport()) {
-      state.feedbackSheetOpen = true
-      state.feedbackSheetExpanded = false
-    }
     render()
     try {
-      const result = await gradeRepeat(language, original, transcript)
+      const result = await gradeRepeat(language, original, text)
       const packed = {
         ...result,
-        transcript,
+        transcript: text,
         sentence: original,
         original,
         scope: state.scope,
-        diff: buildSpeakDiff(original, transcript, language),
+        diff: buildSpeakDiff(original, text, language),
       }
       if (state.scope === 'article') state.fullResult = packed
       else state.results[state.index] = packed
@@ -319,7 +324,7 @@ export function bootSpeaking(root, opts) {
           '採点中に問題が発生しました。もう一度お試しください。',
           '评分出错了，请再试一次。',
         )
-      if (isPhoneViewport() && !activeFeedback()) state.feedbackSheetOpen = false
+      if (isPhoneViewport()) state.feedbackSheetOpen = true
     } finally {
       state.grading = false
       render()
@@ -503,6 +508,10 @@ export function bootSpeaking(root, opts) {
     }
     if (floatText && state.listening) {
       floatText.textContent = state.transcript || '…'
+      // Keep the latest speech visible (last ~3 lines); user can scroll up for earlier text.
+      requestAnimationFrame(() => {
+        floatText.scrollTop = floatText.scrollHeight
+      })
     }
     if (err) {
       if (state.srError) {

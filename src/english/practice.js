@@ -908,7 +908,7 @@ export function bootEnglish(root) {
     if (slots) slots.outerHTML = typingSlotsHtml()
     patchKeyboardHints()
     patchStats()
-    if (!useFocus) scrollCurrentIntoView()
+    scrollCurrentIntoView()
   }
 
   function displayChar(ch) {
@@ -970,6 +970,7 @@ export function bootEnglish(root) {
         const cls = [
           'code-slot',
           filled ? 'filled' : '',
+          isCurrent ? 'is-current' : '',
           isCurrent && state.lastWrong ? 'error' : '',
         ]
           .filter(Boolean)

@@ -96,6 +96,8 @@ export function createSpeechRecognizer(language, opts = {}) {
   let finalText = ''
   let interimText = ''
   let error = ''
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let endSafetyTimer = null
 
   function micBlockedMsg() {
     if (language === 'ja') return 'マイクの使用がブロックされています。'
@@ -105,15 +107,37 @@ export function createSpeechRecognizer(language, opts = {}) {
 
   function emit() {
     opts.onUpdate?.({
-      transcript: `${finalText}${interimText}`.trim(),
+      transcript: `${finalText}${interimText}`.replace(/\s+/g, ' ').trim(),
       interim: interimText,
       listening,
       error,
     })
   }
 
+  /** Promote interim speech so stop/silence doesn't discard what the user said. */
+  function finalizeTranscript() {
+    if (!interimText) return
+    finalText = `${finalText} ${interimText}`.replace(/\s+/g, ' ').trim()
+    interimText = ''
+  }
+
+  function clearEndSafety() {
+    if (endSafetyTimer) {
+      clearTimeout(endSafetyTimer)
+      endSafetyTimer = null
+    }
+  }
+
+  function finishListening() {
+    clearEndSafety()
+    finalizeTranscript()
+    listening = false
+    emit()
+  }
+
   function start() {
     if (!supported) return
+    clearEndSafety()
     error = ''
     finalText = ''
     interimText = ''
@@ -134,13 +158,17 @@ export function createSpeechRecognizer(language, opts = {}) {
       emit()
     }
     rec.onerror = (e) => {
-      error = e.error === 'not-allowed' ? micBlockedMsg() : `Recognition error: ${e.error}`
-      listening = false
-      emit()
+      // "aborted" / "no-speech" are normal when stopping; keep any transcript we have.
+      if (e.error === 'not-allowed') {
+        error = micBlockedMsg()
+      } else if (e.error !== 'aborted' && e.error !== 'no-speech') {
+        error = `Recognition error: ${e.error}`
+      }
+      // Don't clear listening here — wait for onend so final/interim results can flush.
+      if (!listening) emit()
     }
     rec.onend = () => {
-      listening = false
-      emit()
+      finishListening()
     }
     rec.start()
     listening = true
@@ -148,12 +176,25 @@ export function createSpeechRecognizer(language, opts = {}) {
   }
 
   function stop() {
-    if (rec) rec.stop()
-    listening = false
-    emit()
+    if (!rec) {
+      finishListening()
+      return
+    }
+    // Wait for onend so the engine can flush the last result. Safety timeout if onend never fires.
+    try {
+      rec.stop()
+    } catch {
+      finishListening()
+      return
+    }
+    clearEndSafety()
+    endSafetyTimer = setTimeout(() => {
+      if (listening) finishListening()
+    }, 900)
   }
 
   function reset() {
+    clearEndSafety()
     finalText = ''
     interimText = ''
     error = ''
@@ -161,6 +202,7 @@ export function createSpeechRecognizer(language, opts = {}) {
   }
 
   function destroy() {
+    clearEndSafety()
     if (rec) {
       try {
         rec.stop()
@@ -182,7 +224,7 @@ export function createSpeechRecognizer(language, opts = {}) {
       return listening
     },
     get transcript() {
-      return `${finalText}${interimText}`.trim()
+      return `${finalText}${interimText}`.replace(/\s+/g, ' ').trim()
     },
     get error() {
       return error

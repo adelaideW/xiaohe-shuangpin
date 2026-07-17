@@ -825,7 +825,7 @@ function patchCodeSlots() {
     progress.innerHTML = [...code]
       .map((_, i) => {
         const filled = i < state.buffer.length
-        return `<div class="code-slot ${filled ? 'filled' : ''}">${filled ? state.buffer[i] : ''}</div>`
+        return `<div class="code-slot ${filled ? 'filled' : ''} ${i === state.buffer.length ? 'is-current' : ''}">${filled ? state.buffer[i] : ''}</div>`
       })
       .join('')
     return
@@ -833,6 +833,7 @@ function patchCodeSlots() {
   slots.forEach((slot, i) => {
     const filled = i < state.buffer.length
     slot.classList.toggle('filled', filled)
+    slot.classList.toggle('is-current', i === state.buffer.length)
     slot.textContent = filled ? state.buffer[i] : ''
   })
 }
@@ -927,7 +928,7 @@ function patchPassageCursor() {
     pageLabel.textContent = `第 ${state.pageIndex + 1}/${state.pages.length} 页`
   }
 
-  if (!useFocus) scrollCurrentIntoView()
+  scrollCurrentIntoView()
 }
 
 function passageVisibleBounds() {
@@ -1509,7 +1510,7 @@ function renderCodeSlots() {
       ${[...code]
         .map((_, i) => {
           const filled = i < state.buffer.length
-          return `<div class="code-slot ${filled ? 'filled' : ''}">${filled ? state.buffer[i] : ''}</div>`
+          return `<div class="code-slot ${filled ? 'filled' : ''} ${i === state.buffer.length ? 'is-current' : ''}">${filled ? state.buffer[i] : ''}</div>`
         })
         .join('')}
     </div>

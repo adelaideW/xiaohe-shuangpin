@@ -896,12 +896,13 @@ export function bootJapanese(root) {
       slots.innerHTML = [...exp]
         .map((ch, i) => {
           const filled = i < state.buffer.length
-          return `<div class="code-slot ${filled ? 'filled' : ''}">${filled ? state.buffer[i] : ''}</div>`
+          const isCurrent = i === state.buffer.length
+          return `<div class="code-slot ${filled ? 'filled' : ''} ${isCurrent ? 'is-current' : ''}">${filled ? state.buffer[i] : ''}</div>`
         })
         .join('')
     }
     patchStats()
-    if (!useFocus) scrollCurrentIntoView()
+    scrollCurrentIntoView()
   }
 
   function japanesePassageHtml() {
@@ -1057,7 +1058,8 @@ export function bootJapanese(root) {
     const slots = [...exp]
       .map((ch, i) => {
         const filled = i < state.buffer.length
-        return `<div class="code-slot ${filled ? 'filled' : ''}">${filled ? state.buffer[i] : ''}</div>`
+        const isCurrent = i === state.buffer.length
+        return `<div class="code-slot ${filled ? 'filled' : ''} ${isCurrent ? 'is-current' : ''}">${filled ? state.buffer[i] : ''}</div>`
       })
       .join('')
     const hira = cur ? hintHiragana(cur.kana) : ''
@@ -1102,7 +1104,8 @@ export function bootJapanese(root) {
     const slots = [...exp]
       .map((ch, i) => {
         const filled = i < state.buffer.length
-        return `<div class="code-slot ${filled ? 'filled' : ''}">${filled ? state.buffer[i] : ''}</div>`
+        const isCurrent = i === state.buffer.length
+        return `<div class="code-slot ${filled ? 'filled' : ''} ${isCurrent ? 'is-current' : ''}">${filled ? state.buffer[i] : ''}</div>`
       })
       .join('')
 
